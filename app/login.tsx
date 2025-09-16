@@ -12,7 +12,7 @@ export default function HomeScreen() {
         <Text style={styles.logo}>Logo</Text>
         <Text style={styles.logo}>B-finances</Text>
       </View>
-    
+
       <View style={styles.form}>
         <TextInput
           label="Email"
@@ -44,7 +44,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1e293b", 
+    backgroundColor: "#1e293b",
   },
   header: {
     position: "absolute",
