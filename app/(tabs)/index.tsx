@@ -1,6 +1,5 @@
 import React from "react";
 import { FlatList, Text, View, StyleSheet } from "react-native";
-import { Button } from "react-native-paper";
 
 export default function HomeScreen() {
   const transactions = [
@@ -67,7 +66,9 @@ export default function HomeScreen() {
           contentContainerStyle={{ paddingVertical: 10 }}
           renderItem={({ item }) => (
             <View style={styles.transactionRow}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8}}>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+              >
                 <Text>I</Text>
                 <Text style={styles.listItem}>{item.description}</Text>
               </View>
@@ -78,9 +79,6 @@ export default function HomeScreen() {
           )}
         />
       </View>
-      <Button>
-        <Text>Add Gasto</Text>
-      </Button>
     </View>
   );
 }
