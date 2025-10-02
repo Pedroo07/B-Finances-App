@@ -5,9 +5,9 @@ import {
   FlatList,
   TouchableOpacity,
 } from "react-native";
+import 'react-native-get-random-values';
 import { v4 as uuidv4 } from "uuid";
 import { ArrowDown, ArrowUpRight, Equal } from "lucide-react-native";
-import { Transaction } from "@/lib/entities/Transaction";
 import React, { useState } from "react";
 import {
   Button,
@@ -17,6 +17,14 @@ import {
   Portal,
   TextInput,
 } from "react-native-paper";
+type Transaction =  {
+    description: string
+    date: string
+    amount: number
+    type: string
+    id: string
+    category: string
+}
 
 export default function Dashboard() {
   const headerData = [
@@ -91,6 +99,7 @@ export default function Dashboard() {
 
     setDate(formated);
   };
+ 
 
   const handleAddNewItem = () => {
     if (!description || !value || !date || !category) {
@@ -115,6 +124,10 @@ export default function Dashboard() {
     setSelected("Select Category");
     setCategory("");
   };
+   const handleDeleteItem = (id: string) => {
+    SetTransactions((currentItems) => {
+      return currentItems.filter((item) => item.id !== id);
+    })};
 
   return (
     <PaperProvider>
@@ -140,7 +153,7 @@ export default function Dashboard() {
         <View style={styles.transactionsContainer}>
           <Text style={styles.titleList}>Transaction List</Text>
           <View
-            style={{ flexDirection: "row", width: "100%", paddingVertical: 8 }}
+            style={{ flexDirection: "row", width: "92%", paddingVertical: 8 }}
           >
             {headerData.map((item, index) => (
               <View key={index} style={{ flex: 1, alignItems: "flex-start" }}>
@@ -171,6 +184,7 @@ export default function Dashboard() {
                 </Text>
                 <Text style={styles.listItem}>{item.category}</Text>
                 <Text style={styles.listItem}>{item.date}</Text>
+                <Text style={{color: '#fff', fontWeight: 700 }} key={item.id} onPress={() =>  handleDeleteItem(item.id)}>X</Text>
               </View>
             )}
           />
@@ -313,7 +327,7 @@ const styles = StyleSheet.create({
   },
   listItem: {
     fontSize: 16,
-    width: "25%",
+    width: "23%",
     color: "#f1f5f9",
   },
   fab: {
