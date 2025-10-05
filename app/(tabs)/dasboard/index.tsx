@@ -4,8 +4,10 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
-import 'react-native-get-random-values';
+import "react-native-get-random-values";
 import { v4 as uuidv4 } from "uuid";
 import { ArrowDown, ArrowUpRight, Equal } from "lucide-react-native";
 import React, { useState } from "react";
@@ -17,14 +19,15 @@ import {
   Portal,
   TextInput,
 } from "react-native-paper";
-type Transaction =  {
-    description: string
-    date: string
-    amount: number
-    type: string
-    id: string
-    category: string
-}
+import Period from "@/app/(tabs)/dasboard/period";
+type Transaction = {
+  description: string;
+  date: string;
+  amount: number;
+  type: string;
+  id: string;
+  category: string;
+};
 
 export default function Dashboard() {
   const headerData = [
@@ -63,7 +66,7 @@ export default function Dashboard() {
       id: uuidv4(),
       description: "Rent",
       amount: -50,
-      date: "20/01",
+      date: "20/10",
       category: "Foods",
       type: "expense",
     },
@@ -71,7 +74,7 @@ export default function Dashboard() {
       id: uuidv4(),
       description: "Rent",
       amount: -50,
-      date: "20/01",
+      date: "20/10",
       category: "Foods",
       type: "expense",
     },
@@ -84,23 +87,33 @@ export default function Dashboard() {
   const [dialogVisible, setDialogVisible] = React.useState(false);
   const [selected, setSelected] = React.useState("Selected");
   const expenseOptions = ["Foods", "Fixes", "Entertainment", "Others"];
+  const [expense, setExpense] = useState<number>(0);
+  const [income, setIncome] = useState<number>(0);
+  const [balance, setBalance] = useState<number>(0);
+  const [filteredItems, setFilteredItems] = useState<Transaction[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState<number>(
+    () => new Date().getMonth() + 1
+  );
+  const [activeFilter, setActiveFilter] = useState("month");
+  const sortItemByDate = (transactions: Transaction[]): Transaction[] => {
+    return [...transactions].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+  };
 
   //funçoes
   const dateHandleChange = (text: string) => {
     let cleaned = text.replace(/\D/g, "");
 
-    if (cleaned.length > 8) cleaned = cleaned.slice(0, 8);
+    if (cleaned.length > 4) cleaned = cleaned.slice(0, 4);
 
     let formated = "";
 
     if (cleaned.length >= 1) formated += cleaned.slice(0, 2);
     if (cleaned.length >= 3) formated += "/" + cleaned.slice(2, 4);
-    if (cleaned.length >= 5) formated += "/" + cleaned.slice(4, 8);
 
     setDate(formated);
   };
- 
-
   const handleAddNewItem = () => {
     if (!description || !value || !date || !category) {
       alert("Preencha todos os campos!");
@@ -124,30 +137,87 @@ export default function Dashboard() {
     setSelected("Select Category");
     setCategory("");
   };
-   const handleDeleteItem = (id: string) => {
+  const handleDeleteItem = (id: string) => {
     SetTransactions((currentItems) => {
       return currentItems.filter((item) => item.id !== id);
-    })};
+    });
+  };
+  const caulculateCurrentMonthTotals = () => {
+    let totalExpense = 0;
+    let totalIncome = 0;
+    const today = new Date();
+    const currentYear = today.getFullYear();
+
+    transactions.forEach((item) => {
+      const [day, month] = item.date.split("/").map(Number);
+      const year = currentYear;
+      if (year === currentYear && month === selectedMonth)
+        if (item.amount > 0) {
+          totalIncome += item.amount;
+        } else {
+          totalExpense += Math.abs(item.amount);
+        }
+    });
+    return {
+      income: totalIncome,
+      expense: totalExpense,
+      balance: totalIncome - totalExpense,
+    };
+  };
+  const handleMonthChange = (newMonth: number) => {
+    setSelectedMonth(newMonth);
+    setActiveFilter("month");
+  };
+  React.useEffect(() => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    if (activeFilter !== "month") return;
+    const filteredItems = transactions.filter((item) => {
+      const [day, month] = item.date.split("/").map(Number);
+      const year = currentYear;
+      return year === new Date().getFullYear() && month === selectedMonth;
+    });
+    const sortedItems = sortItemByDate(filteredItems);
+    setFilteredItems(sortedItems)
+    const { income, expense, balance } = caulculateCurrentMonthTotals();
+    setIncome(income);
+    setExpense(expense);
+    setBalance(balance);
+  }, [ selectedMonth]);
 
   return (
     <PaperProvider>
       <View style={styles.container}>
-        <Text style={styles.title}>Dashboard</Text>
+        <Period
+          onMonthChange={handleMonthChange}
+          selectedMonth={selectedMonth}
+        />
         <View style={styles.head}>
           <View style={[styles.result, { backgroundColor: "#e00808" }]}>
             <ArrowDown color="white" size={40} />
             <Text style={styles.text}>Expense</Text>
-            <Text style={styles.text}>$500,00</Text>
+            <Text style={styles.text}>${expense}</Text>
           </View>
           <View style={[styles.result, { backgroundColor: "#0f766e" }]}>
             <ArrowUpRight color="white" size={40} />
             <Text style={styles.text}>Income</Text>
-            <Text style={styles.text}>$2,500</Text>
+            <Text style={styles.text}>${income}</Text>
           </View>
           <View style={[styles.result, { backgroundColor: "#918d8d" }]}>
             <Equal color="white" size={40} />
             <Text style={styles.text}>Total</Text>
-            <Text style={styles.text}>$2,000</Text>
+            <Text
+              style={[
+                styles.text,
+                {
+                  color: String(balance).startsWith("-")
+                    ? "#e00808"
+                    : "#0f766e",
+                },
+              ]}
+            >
+              ${balance}
+            </Text>
           </View>
         </View>
         <View style={styles.transactionsContainer}>
@@ -164,7 +234,7 @@ export default function Dashboard() {
             ))}
           </View>
           <FlatList
-            data={transactions}
+            data={filteredItems}
             keyExtractor={(item, index) => index.toString()}
             contentContainerStyle={{ paddingVertical: 10 }}
             renderItem={({ item }) => (
@@ -184,7 +254,13 @@ export default function Dashboard() {
                 </Text>
                 <Text style={styles.listItem}>{item.category}</Text>
                 <Text style={styles.listItem}>{item.date}</Text>
-                <Text style={{color: '#fff', fontWeight: 700 }} key={item.id} onPress={() =>  handleDeleteItem(item.id)}>X</Text>
+                <Text
+                  style={{ color: "#fff", fontWeight: 700 }}
+                  key={item.id}
+                  onPress={() => handleDeleteItem(item.id)}
+                >
+                  X
+                </Text>
               </View>
             )}
           />
@@ -200,71 +276,73 @@ export default function Dashboard() {
               +
             </Text>
           </TouchableOpacity>
-          <Portal>
-            <Dialog visible={dialogVisible} onDismiss={() => {}}>
-              <Dialog.Title>Add new Transaction</Dialog.Title>
-              <Dialog.Content>
-                <TextInput
-                  style={styles.input}
-                  label="Description"
-                  value={description}
-                  onChangeText={(description) => setDescription(description)}
-                />
-                <TextInput
-                  style={styles.input}
-                  label="Value"
-                  value={value.toString()}
-                  keyboardType="numeric"
-                  onChangeText={(value) => setValue(Number(value))}
-                />
-                <TextInput
-                  style={styles.input}
-                  label="Date"
-                  value={date}
-                  onChangeText={dateHandleChange}
-                  keyboardType="decimal-pad"
-                  maxLength={10}
-                />
-                <Button
-                  mode="outlined"
-                  onPress={() => setShowOptions(!showOptions)}
-                >
-                  {selected}
-                </Button>
-                {showOptions && (
-                  <View>
-                    {expenseOptions.map((option) => (
-                      <List.Item
-                        key={option}
-                        title={option}
-                        onPress={() => {
-                          setSelected(option);
-                          setCategory(option);
-                          setShowOptions(false);
-                        }}
-                      />
-                    ))}
-                  </View>
-                )}
-              </Dialog.Content>
-              <Dialog.Actions>
-                <Button
-                  onPress={() => {
-                    setDialogVisible(false);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onPress={() => {
-                    handleAddNewItem();
-                  }}
-                >
-                  OK
-                </Button>
-              </Dialog.Actions>
-            </Dialog>
-          </Portal>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <Portal>
+              <Dialog visible={dialogVisible} onDismiss={() => {}}>
+                <Dialog.Title>Add new Transaction</Dialog.Title>
+                <Dialog.Content>
+                  <TextInput
+                    style={styles.input}
+                    label="Description"
+                    value={description}
+                    onChangeText={(description) => setDescription(description)}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    label="Value"
+                    value={value.toString()}
+                    keyboardType="numeric"
+                    onChangeText={(value) => setValue(Number(value))}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    label="Date"
+                    value={date}
+                    onChangeText={dateHandleChange}
+                    keyboardType="number-pad"
+                    maxLength={10}
+                  />
+                  <Button
+                    mode="outlined"
+                    onPress={() => setShowOptions(!showOptions)}
+                  >
+                    {selected}
+                  </Button>
+                  {showOptions && (
+                    <View>
+                      {expenseOptions.map((option) => (
+                        <List.Item
+                          key={option}
+                          title={option}
+                          onPress={() => {
+                            setSelected(option);
+                            setCategory(option);
+                            setShowOptions(false);
+                          }}
+                        />
+                      ))}
+                    </View>
+                  )}
+                </Dialog.Content>
+                <Dialog.Actions>
+                  <Button
+                    onPress={() => {
+                      setDialogVisible(false);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onPress={() => {
+                      handleAddNewItem();
+                    }}
+                  >
+                    OK
+                  </Button>
+                </Dialog.Actions>
+              </Dialog>
+            </Portal>
+          </TouchableWithoutFeedback>
         </View>
       </View>
     </PaperProvider>
@@ -276,7 +354,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#1e293b",
     paddingHorizontal: 20,
-    paddingTop: 20,
   },
   text: {
     color: "#f1f5f9",
