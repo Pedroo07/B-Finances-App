@@ -1,12 +1,14 @@
-import { View, Text, FlatList, StyleSheet } from "react-native";
+import { View, Text, FlatList, StyleSheet, Dimensions } from "react-native";
 import React, { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import transactions from "../../../transactions.json";
 import { Transaction } from "@/lib/entities/transaction";
 import Period from "@/app/(tabs)/dasboard/period";
 import { Checkbox } from "react-native-paper";
+import { BarChart } from "react-native-chart-kit";
 
 export default function HomeScreen() {
+   const screenWidth = Dimensions.get("window").width;
   const [items] = useState<Transaction[]>(
     transactions.map((item) => ({ ...item, id: uuidv4() }))
   );
@@ -21,6 +23,34 @@ export default function HomeScreen() {
         item.id === id ? { ...item, paid: !item.paid } : item
       )
     );
+  };
+  const separateByCategory = (items: Transaction[]) => {
+    const totalExpenses = items
+      .filter((item) => item.amount < 0)
+      .reduce((acc, item) => acc + Math.abs(item.amount), 0);
+    const expensesByCategory: Record<string, number> = {};
+    items.forEach((item) => {
+      if (item.amount < 0) {
+        if (!expensesByCategory[item.category]) {
+          expensesByCategory[item.category] = 0;
+        }
+        expensesByCategory[item.category] += Math.abs(item.amount);
+      }
+    });
+    const chartData = Object.entries(expensesByCategory).map(
+      ([category, amount]) => ({
+        category,
+        amount,
+      })
+    );
+
+    const percentageData = Object.entries(expensesByCategory).map(
+      ([category, value]) => ({
+        category,
+        value: (value / totalExpenses) * 100,
+      })
+    );
+    return { chartData, percentageData };
   };
   const handleMonthChange = (newMonth: number) => {
     setSelectedMonth(newMonth);
@@ -39,6 +69,8 @@ export default function HomeScreen() {
     setFilteredItems(filteredItems);
   }, [selectedMonth, items]);
 
+  const result = separateByCategory(filteredItems);
+
   return (
     <View style={styles.container}>
       <View style={{ width: "90%" }}>
@@ -47,9 +79,41 @@ export default function HomeScreen() {
           onMonthChange={handleMonthChange}
         />
       </View>
-      <View style={styles.graph}>
-        <Text>Grafico</Text>
-      </View>
+      <BarChart
+        style={{ marginVertical: 8, borderRadius: 8, alignItems: "center" }}
+        data={
+          result.chartData.length
+            ? {
+                labels: result.chartData.map((item) => item.category),
+                datasets: [
+                  { data: result.chartData.map((item) => item.amount) },
+                ],
+              }
+            : {
+                labels: ["Sem dados"],
+                datasets: [{ data: [0] }],
+              }
+        }
+        width={screenWidth * 0.9}
+        height={220}
+        fromZero
+        yAxisLabel="R$"
+        yAxisSuffix=",00"
+        chartConfig={{
+          backgroundColor: "#292f3a",
+          backgroundGradientFrom: "#42526b",
+          backgroundGradientFromOpacity: 0,  
+          decimalPlaces: 0,
+          color: (opacity = 1) => `rgba(0, 200, 255, ${opacity})`,
+          labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+          propsForLabels:{
+            fontSize: 10,
+            fontWeight: "600"
+          },
+        }}
+        
+        verticalLabelRotation={30}
+      />
       <View style={{ width: "100%", alignItems: "center", marginTop: 20 }}>
         <FlatList
           contentContainerStyle={{ alignItems: "center", paddingBottom: 20 }}
@@ -61,13 +125,13 @@ export default function HomeScreen() {
                 <Text style={[styles.itemCategory, { fontWeight: "600" }]}>
                   {item.category}
                 </Text>
-                <View style={{ flexDirection: "row", alignItems: "center"}}>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
                   {item.paid !== undefined && (
                     <Checkbox
                       status={item.paid ? "checked" : "unchecked"}
                       color="#007AFF"
                       uncheckedColor="#000"
-                      theme={{ colors: { background: "#000" }}}
+                      theme={{ colors: { background: "#000" } }}
                       onPress={() => {
                         togglePaid(item.id);
                       }}

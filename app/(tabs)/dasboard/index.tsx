@@ -21,14 +21,7 @@ import {
   TextInput,
 } from "react-native-paper";
 import Period from "@/app/(tabs)/dasboard/period";
-type Transaction = {
-  description: string;
-  date: string;
-  amount: number;
-  type: string;
-  id: string;
-  category: string;
-};
+import { Transaction } from "@/lib/entities/transaction";
 
 export default function Dashboard() {
   const headerData = [
@@ -57,7 +50,7 @@ export default function Dashboard() {
   const transactionsData: Transaction[] = transactions.map((item) => ({
     ...item,
     id: uuidv4(),
-  }))
+  }));
   const sortItemByDate = (items: Transaction[]): Transaction[] => {
     return [...items].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -75,35 +68,6 @@ export default function Dashboard() {
     if (cleaned.length >= 3) formated += "/" + cleaned.slice(2, 4);
 
     setDate(formated);
-  };
-  const handleAddNewItem = () => {
-    if (!description || !value || !date || !category) {
-      alert("Preencha todos os campos!");
-      return;
-    }
-    const newItem: Transaction = {
-      amount: value,
-      category: category,
-      date: date,
-      description: description,
-      id: uuidv4(),
-      type: "expense",
-    };
-
-    setFilteredItems((prev) => [...prev, newItem]);
-
-    setDialogVisible(false);
-    setDescription("");
-    setValue(0);
-    setDate("");
-    setSelected("Select Category");
-    setCategory("");
-  };
-  const handleDeleteItem = (id: string) => {
-    const deleteItem = ((currentItems: any) => {
-      return currentItems.filter((item: any) => item.id !== id);
-    });
-    setFilteredItems(deleteItem);
   };
   const caulculateCurrentMonthTotals = () => {
     let totalExpense = 0;
@@ -127,6 +91,88 @@ export default function Dashboard() {
       balance: totalIncome - totalExpense,
     };
   };
+  const calculateTotals = (
+    items: Transaction[]
+  ): { income: number; expense: number; balance: number } => {
+    let totalIncome = 0;
+    let totalExpense = 0;
+
+    items.forEach((item) => {
+      if (item.amount > 0) {
+        totalIncome += item.amount;
+      } else {
+        totalExpense += Math.abs(item.amount);
+      }
+    });
+
+    return {
+      income: totalIncome,
+      expense: totalExpense,
+      balance: totalIncome - totalExpense,
+    };
+  };
+  const handleAddNewItem = () => {
+    if (!description || !value || !date || !category) {
+      alert("Preencha todos os campos!");
+      return;
+    }
+    const newItem: Transaction = {
+      amount: -value,
+      category: category,
+      date: date,
+      description: description,
+      id: uuidv4(),
+      type: "expense",
+      paid: category === "Fixes" ? false : undefined,
+    };
+    const itemsArray = [...filteredItems, newItem]
+    const sortedItems = sortItemByDate(itemsArray);
+    setFilteredItems(sortedItems); 
+
+    const today = new Date();
+    const currentYear = today.getFullYear();
+
+    const filterItems = sortedItems.filter((item) => {
+      const [day, month] = item.date.split("/").map(Number);
+      const year = currentYear;
+      return year === currentYear && month === selectedMonth;
+    });
+    const { income, expense, balance } = calculateTotals(filterItems);
+
+    setIncome(income);
+    setExpense(expense);
+    setBalance(balance);
+    setFilteredItems(sortedItems);
+
+    setDialogVisible(false);
+    setDescription("");
+    setValue(0);
+    setDate("");
+    setSelected("Select Category");
+    setCategory("");
+  };
+  const handleDeleteItem = (id: string) => {
+    const deleteItem = filteredItems.filter((item) => item.id !== id);
+
+    const today = new Date();
+    const currentYear = today.getFullYear();
+
+    const sortedItems = sortItemByDate(deleteItem);
+
+    const filterItems = sortedItems.filter((item) => {
+      const [day, month] = item.date.split("/").map(Number);
+      const year = currentYear;
+      return year === currentYear && month === selectedMonth;
+    });
+
+    const { income, expense, balance } = calculateTotals(filterItems);
+
+    setIncome(income);
+    setExpense(expense);
+    setBalance(balance);
+    setFilteredItems(sortedItems);
+  };
+
   const handleMonthChange = (newMonth: number) => {
     setSelectedMonth(newMonth);
     setActiveFilter("month");
@@ -141,12 +187,12 @@ export default function Dashboard() {
       return year === new Date().getFullYear() && month === selectedMonth;
     });
     const sortedItems = sortItemByDate(filteredItems);
-    setFilteredItems(sortedItems)
+    setFilteredItems(sortedItems);
     const { income, expense, balance } = caulculateCurrentMonthTotals();
     setIncome(income);
     setExpense(expense);
     setBalance(balance);
-  }, [ selectedMonth]);
+  }, [selectedMonth]);
 
   return (
     <PaperProvider>
