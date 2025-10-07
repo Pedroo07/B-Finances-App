@@ -11,6 +11,7 @@ import "react-native-get-random-values";
 import { v4 as uuidv4 } from "uuid";
 import { ArrowDown, ArrowUpRight, Equal } from "lucide-react-native";
 import React, { useState } from "react";
+import transactions from "../../../transactions.json";
 import {
   Button,
   Dialog,
@@ -37,48 +38,6 @@ export default function Dashboard() {
     { key: "Date" },
   ];
 
-  const [transactions, SetTransactions] = React.useState<Transaction[]>([
-    {
-      id: uuidv4(),
-      description: "Salary",
-      amount: 2500,
-      date: "20/01",
-      category: "Salary",
-      type: "income",
-    },
-    {
-      id: uuidv4(),
-      description: "Groceries",
-      amount: -150.0,
-      date: "20/01",
-      category: "Fixes",
-      type: "expense",
-    },
-    {
-      id: uuidv4(),
-      description: "Rent",
-      amount: -50,
-      date: "20/01",
-      category: "Foods",
-      type: "expense",
-    },
-    {
-      id: uuidv4(),
-      description: "Rent",
-      amount: -50,
-      date: "20/10",
-      category: "Foods",
-      type: "expense",
-    },
-    {
-      id: uuidv4(),
-      description: "Rent",
-      amount: -50,
-      date: "20/10",
-      category: "Foods",
-      type: "expense",
-    },
-  ]);
   const [description, setDescription] = React.useState("");
   const [value, setValue] = React.useState(0);
   const [date, setDate] = React.useState("");
@@ -95,13 +54,16 @@ export default function Dashboard() {
     () => new Date().getMonth() + 1
   );
   const [activeFilter, setActiveFilter] = useState("month");
-  const sortItemByDate = (transactions: Transaction[]): Transaction[] => {
-    return [...transactions].sort(
+  const transactionsData: Transaction[] = transactions.map((item) => ({
+    ...item,
+    id: uuidv4(),
+  }))
+  const sortItemByDate = (items: Transaction[]): Transaction[] => {
+    return [...items].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
   };
 
-  //funçoes
   const dateHandleChange = (text: string) => {
     let cleaned = text.replace(/\D/g, "");
 
@@ -128,7 +90,7 @@ export default function Dashboard() {
       type: "expense",
     };
 
-    SetTransactions((prev) => [...prev, newItem]);
+    setFilteredItems((prev) => [...prev, newItem]);
 
     setDialogVisible(false);
     setDescription("");
@@ -138,9 +100,10 @@ export default function Dashboard() {
     setCategory("");
   };
   const handleDeleteItem = (id: string) => {
-    SetTransactions((currentItems) => {
-      return currentItems.filter((item) => item.id !== id);
+    const deleteItem = ((currentItems: any) => {
+      return currentItems.filter((item: any) => item.id !== id);
     });
+    setFilteredItems(deleteItem);
   };
   const caulculateCurrentMonthTotals = () => {
     let totalExpense = 0;
@@ -148,7 +111,7 @@ export default function Dashboard() {
     const today = new Date();
     const currentYear = today.getFullYear();
 
-    transactions.forEach((item) => {
+    transactionsData.forEach((item) => {
       const [day, month] = item.date.split("/").map(Number);
       const year = currentYear;
       if (year === currentYear && month === selectedMonth)
@@ -172,7 +135,7 @@ export default function Dashboard() {
     const today = new Date();
     const currentYear = today.getFullYear();
     if (activeFilter !== "month") return;
-    const filteredItems = transactions.filter((item) => {
+    const filteredItems = transactionsData.filter((item) => {
       const [day, month] = item.date.split("/").map(Number);
       const year = currentYear;
       return year === new Date().getFullYear() && month === selectedMonth;

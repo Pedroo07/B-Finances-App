@@ -5,4 +5,5 @@ export type Transaction =  {
     type: string
     id: string
     category: string
+    paid?: boolean
 }
