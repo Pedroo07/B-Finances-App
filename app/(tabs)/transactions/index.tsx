@@ -1,24 +1,41 @@
-import { View, Text, FlatList, StyleSheet, Dimensions } from "react-native";
-import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
+import React, { useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import transactions from "../../../transactions.json";
 import { Transaction } from "@/lib/entities/transaction";
 import Period from "@/app/(tabs)/dasboard/period";
-import { Checkbox } from "react-native-paper";
-import { BarChart } from "react-native-chart-kit";
+import {
+  Button,
+  Checkbox,
+  IconButton,
+  Modal,
+  Portal,
+} from "react-native-paper";
+import Graphic from "@/components/graphic";
+
+type Filter = {
+  paid: boolean | null;
+  categories: string[];
+  month: number;
+};
 
 export default function HomeScreen() {
-   const screenWidth = Dimensions.get("window").width;
-  const [items] = useState<Transaction[]>(
+  const [items, setItems] = useState<Transaction[]>(
     transactions.map((item) => ({ ...item, id: uuidv4() }))
   );
-  const [filteredItems, setFilteredItems] = useState<Transaction[]>([]);
-  const [activeFilter, setActiveFilter] = useState("month");
-  const [selectedMonth, setSelectedMonth] = useState<number>(
-    () => new Date().getMonth() + 1
-  );
+  const [filter, setFilter] = useState<Filter>({
+    paid: null,
+    categories: [],
+    month: new Date().getMonth() + 1,
+  });
   const togglePaid = (id: string) => {
-    setFilteredItems((prevItem) =>
+    setItems((prevItem) =>
       prevItem.map((item) =>
         item.id === id ? { ...item, paid: !item.paid } : item
       )
@@ -53,68 +70,76 @@ export default function HomeScreen() {
     return { chartData, percentageData };
   };
   const handleMonthChange = (newMonth: number) => {
-    setSelectedMonth(newMonth);
-    setActiveFilter("month");
+    setFilter((currentFilter) => ({ ...currentFilter, month: newMonth }));
   };
-  useEffect(() => {
-    const today = new Date();
-    const currentYear = today.getFullYear();
 
-    if (activeFilter !== "month") return;
-    const filteredItems = items.filter((item) => {
-      const [day, month] = item.date.split("/").map(Number);
-      const year = currentYear;
-      return year === new Date().getFullYear() && month === selectedMonth;
-    });
-    setFilteredItems(filteredItems);
-  }, [selectedMonth, items]);
+  const filteredItems = items.filter((item) => {
+    const [day, month] = item.date.split("/").map(Number);
+
+    if (month !== filter.month) return false;
+
+    if (
+      filter.categories.length > 0 &&
+      !filter.categories.includes(item.category)
+    )
+      return false;
+
+    if (filter.paid !== null && item.paid !== filter.paid) return false;
+
+    return true;
+  });
 
   const result = separateByCategory(filteredItems);
+  const [visible, setVisible] = useState(false);
+  const openModal = () => setVisible(true);
+  const closeModal = () => setVisible(false);
 
+  const categories = ["Foods", "Fixes", "Others"];
+  const paidOptions = [
+    {
+      label: "Paid",
+      value: true,
+    },
+    { label: "Not Paid", value: false },
+  ];
+  const toggleCategory = (category: string) => {
+    setFilter((prev) => {
+      const exist = prev.categories.includes(category);
+      return {
+        ...prev,
+        categories: exist
+          ? prev.categories.filter((c: string) => c !== category)
+          : [...prev.categories, category],
+      };
+    });
+  };
+  const selectPaid = (value: boolean | null) => {
+    if (filter.paid === value) {
+      setFilter({ ...filter, paid: null });
+    } else {
+      setFilter({ ...filter, paid: value });
+    }
+  };
   return (
     <View style={styles.container}>
-      <View style={{ width: "90%" }}>
+      <View
+        style={{
+          width: "90%",
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <Period
-          selectedMonth={selectedMonth}
+          selectedMonth={filter.month}
           onMonthChange={handleMonthChange}
         />
+        <IconButton icon="filter-variant" onPress={openModal} />
       </View>
-      <BarChart
-        style={{ marginVertical: 8, borderRadius: 8, alignItems: "center" }}
-        data={
-          result.chartData.length
-            ? {
-                labels: result.chartData.map((item) => item.category),
-                datasets: [
-                  { data: result.chartData.map((item) => item.amount) },
-                ],
-              }
-            : {
-                labels: ["Sem dados"],
-                datasets: [{ data: [0] }],
-              }
-        }
-        width={screenWidth * 0.9}
-        height={220}
-        fromZero
-        yAxisLabel="R$"
-        yAxisSuffix=",00"
-        chartConfig={{
-          backgroundColor: "#292f3a",
-          backgroundGradientFrom: "#42526b",
-          backgroundGradientFromOpacity: 0,  
-          decimalPlaces: 0,
-          color: (opacity = 1) => `rgba(0, 200, 255, ${opacity})`,
-          labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-          propsForLabels:{
-            fontSize: 10,
-            fontWeight: "600"
-          },
-        }}
-        
-        verticalLabelRotation={30}
-      />
-      <View style={{ width: "100%", alignItems: "center", marginTop: 20 }}>
+      <Graphic result={result} />
+      <View
+        style={{ width: "100%", alignItems: "center", marginTop: 20, flex: 1 }}
+      >
         <FlatList
           contentContainerStyle={{ alignItems: "center", paddingBottom: 20 }}
           data={filteredItems}
@@ -132,9 +157,7 @@ export default function HomeScreen() {
                       color="#007AFF"
                       uncheckedColor="#000"
                       theme={{ colors: { background: "#000" } }}
-                      onPress={() => {
-                        togglePaid(item.id);
-                      }}
+                      onPress={() => togglePaid(item.id)}
                     />
                   )}
                   <Text style={styles.itemTransaction}>{item.description}</Text>
@@ -170,6 +193,71 @@ export default function HomeScreen() {
           )}
         />
       </View>
+      <Portal>
+        <Modal
+          visible={visible}
+          onDismiss={closeModal}
+          contentContainerStyle={styles.modal}
+        >
+          <Text style={styles.title}>Filtrar por categoria</Text>
+          <FlatList
+            data={categories}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            renderItem={({ item }) => {
+              const isSelected = filter.categories.includes(item);
+              return (
+                <TouchableOpacity
+                  onPress={() => toggleCategory(item)}
+                  style={{
+                    backgroundColor: isSelected ? "#3b82f6" : "#374151",
+                    paddingVertical: 6,
+                    paddingHorizontal: 14,
+                    borderRadius: 20,
+                    marginRight: 10,
+                  }}
+                >
+                  <Text style={{ color: "white" }}>{item}</Text>
+                </TouchableOpacity>
+              );
+            }}
+            keyExtractor={(item) => item}
+          />
+
+          <Text style={styles.title}>Filtrar por data</Text>
+          <FlatList
+            data={paidOptions}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            renderItem={({ item }) => {
+              const isSelected = filter.paid === item.value;
+              return (
+                <TouchableOpacity
+                  onPress={() => selectPaid(item.value)}
+                  style={{
+                    backgroundColor: isSelected ? "#3b82f6" : "#374151",
+                    paddingVertical: 6,
+                    paddingHorizontal: 14,
+                    borderRadius: 20,
+                    marginRight: 10,
+                  }}
+                >
+                  <Text style={{ color: "white" }}>{item.label}</Text>
+                </TouchableOpacity>
+              );
+            }}
+            keyExtractor={(item) => item.label}
+          />
+
+          <Button
+            mode="contained"
+            onPress={closeModal}
+            style={{ marginTop: 16 }}
+          >
+            Aplicar Filtros
+          </Button>
+        </Modal>
+      </Portal>
     </View>
   );
 }
@@ -180,6 +268,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     alignItems: "center",
     backgroundColor: "#1e293b",
+  },
+  modal: {
+    backgroundColor: "#1e293b",
+    padding: 20,
+    margin: 20,
+    borderRadius: 8,
+  },
+  card: {
+    marginVertical: 4,
+    marginHorizontal: 4,
   },
   title: {
     fontWeight: "bold",
@@ -216,7 +314,7 @@ const styles = StyleSheet.create({
     minWidth: "90%",
     marginBottom: 12,
     padding: 12,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: "#7c90a3",
   },
   itemTransaction: {
     fontSize: 16,
@@ -231,7 +329,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     padding: 8,
     borderRadius: 8,
-    backgroundColor: "#ccc",
+    backgroundColor: "#b4b4b4",
     textAlign: "center",
   },
   status: {
