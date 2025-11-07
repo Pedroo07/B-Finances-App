@@ -25,21 +25,21 @@
   {
     "description": "Rent",
     "amount": -50,
-    "date": "20/10",
+    "date": "20/11",
     "category": "Foods",
     "type": "expense"
   },
   {
     "description": "Rent",
     "amount": -100,
-    "date": "20/10",
+    "date": "06/11",
     "category": "Foods",
     "type": "expense"
   },
   {
     "description": "Vivo Easy",
     "amount": -200,
-    "date": "20/10",
+    "date": "07/11",
     "category": "Fixes",
     "type": "expense"
   }

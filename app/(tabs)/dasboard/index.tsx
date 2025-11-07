@@ -6,11 +6,13 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   Keyboard,
+  Pressable,
+  Animated,
 } from "react-native";
 import "react-native-get-random-values";
 import { v4 as uuidv4 } from "uuid";
-import { ArrowDown, ArrowUpRight, Equal } from "lucide-react-native";
-import React, { useState } from "react";
+import { ArrowDown, ArrowUpRight } from "lucide-react-native";
+import React, { useRef, useState } from "react";
 import transactions from "../../../transactions.json";
 import {
   Button,
@@ -20,17 +22,39 @@ import {
   Portal,
   TextInput,
 } from "react-native-paper";
-import Period from "@/app/(tabs)/dasboard/period";
 import { Transaction } from "@/lib/entities/transaction";
 
-export default function Dashboard() {
-  const headerData = [
-    { key: "Description" },
-    { key: "Value" },
-    { key: "Category" },
-    { key: "Date" },
-  ];
+type Filter =
+  | { type: "day"; day: number }
+  | { type: "month"; month: number }
+  | { type: "weekly"; start: Date; end: Date }
+  | { type: "none" };
 
+export default function Dashboard() {
+  const [select, setSelect] = useState("");
+  const scale = useRef(new Animated.Value(1)).current;
+  const onPressIn = () => {
+    Animated.spring(scale, {
+      toValue: 1.05,
+      useNativeDriver: true,
+    }).start();
+  };
+  const onPressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+  };
+  function createDateFromDDMM(ddmm: string): Date {
+    const [day, month] = ddmm.split("/").map(Number);
+    const currentYear = new Date().getFullYear();
+    return new Date(currentYear, month - 1, day);
+  }
+  const [filter, setFilter] = useState<Filter>(() => ({ type: "none" }));
+
+  const [items, setItems] = useState<Transaction[]>(
+    transactions.map((item) => ({ ...item, id: uuidv4() }))
+  );
   const [description, setDescription] = React.useState("");
   const [value, setValue] = React.useState(0);
   const [date, setDate] = React.useState("");
@@ -42,15 +66,49 @@ export default function Dashboard() {
   const [expense, setExpense] = useState<number>(0);
   const [income, setIncome] = useState<number>(0);
   const [balance, setBalance] = useState<number>(0);
-  const [filteredItems, setFilteredItems] = useState<Transaction[]>([]);
-  const [selectedMonth, setSelectedMonth] = useState<number>(
-    () => new Date().getMonth() + 1
-  );
-  const [activeFilter, setActiveFilter] = useState("month");
-  const transactionsData: Transaction[] = transactions.map((item) => ({
-    ...item,
-    id: uuidv4(),
-  }));
+
+  const filterByWeekly = () => {
+    const today = new Date();
+    const startWeek = new Date(today);
+    startWeek.setDate(today.getDate() - today.getDay());
+    startWeek.setHours(0, 0, 0, 0);
+
+    const endWeek = new Date(startWeek);
+    endWeek.setDate(startWeek.getDate() + 6);
+    endWeek.setHours(23, 59, 59, 99);
+    setFilter({ type: "weekly", start: startWeek, end: endWeek });
+  };
+
+  const filterByMonth = () => {
+    const today = new Date();
+    setFilter({ type: "month", month: today.getMonth() + 1 });
+  };
+
+  const filterByDay = () => {
+    const today = new Date();
+    setFilter({ type: "day", day: today.getDate() });
+  };
+
+  const filteredItems = items.filter((item) => {
+    const dateItem = createDateFromDDMM(item.date);
+    const dayOfMonth = dateItem.getDate();
+    const month = dateItem.getMonth() + 1;
+
+    switch (filter.type) {
+      case "day":
+        return dayOfMonth === filter.day;
+      case "month":
+        return month === filter.month;
+      case "weekly":
+        return (
+          dateItem.getTime() >= filter.start.getTime() &&
+          dateItem.getTime() <= filter.end.getTime()
+        );
+      default:
+        return true;
+    }
+  });
+
   const sortItemByDate = (items: Transaction[]): Transaction[] => {
     return [...items].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -69,13 +127,13 @@ export default function Dashboard() {
 
     setDate(formated);
   };
-  const caulculateCurrentMonthTotals = () => {
+   const caulculateCurrentMonthTotals = () => {
     let totalExpense = 0;
     let totalIncome = 0;
     const today = new Date();
     const currentYear = today.getFullYear();
 
-    transactionsData.forEach((item) => {
+    items.forEach((item) => {
       const [day, month] = item.date.split("/").map(Number);
       const year = currentYear;
       if (year === currentYear && month === selectedMonth)
@@ -125,9 +183,9 @@ export default function Dashboard() {
       type: "expense",
       paid: category === "Fixes" ? false : undefined,
     };
-    const itemsArray = [...filteredItems, newItem]
+    const itemsArray = [...filteredItems, newItem];
     const sortedItems = sortItemByDate(itemsArray);
-    setFilteredItems(sortedItems); 
+    setItems(sortedItems);
 
     const today = new Date();
     const currentYear = today.getFullYear();
@@ -142,7 +200,7 @@ export default function Dashboard() {
     setIncome(income);
     setExpense(expense);
     setBalance(balance);
-    setFilteredItems(sortedItems);
+    setItems(sortedItems);
 
     setDialogVisible(false);
     setDescription("");
@@ -170,58 +228,61 @@ export default function Dashboard() {
     setIncome(income);
     setExpense(expense);
     setBalance(balance);
-    setFilteredItems(sortedItems);
+    setItems(sortedItems);
   };
-
-  const handleMonthChange = (newMonth: number) => {
-    setSelectedMonth(newMonth);
-    setActiveFilter("month");
-  };
-  React.useEffect(() => {
-    const today = new Date();
-    const currentYear = today.getFullYear();
-    if (activeFilter !== "month") return;
-    const filteredItems = transactionsData.filter((item) => {
-      const [day, month] = item.date.split("/").map(Number);
-      const year = currentYear;
-      return year === new Date().getFullYear() && month === selectedMonth;
-    });
-    const sortedItems = sortItemByDate(filteredItems);
-    setFilteredItems(sortedItems);
-    const { income, expense, balance } = caulculateCurrentMonthTotals();
-    setIncome(income);
-    setExpense(expense);
-    setBalance(balance);
-  }, [selectedMonth]);
 
   return (
     <PaperProvider>
       <View style={styles.container}>
-        <Period
-          onMonthChange={handleMonthChange}
-          selectedMonth={selectedMonth}
-        />
+        <View style={{ padding: 16 }}>
+          <Text style={{ fontWeight: 600, color: "#fff", fontSize: 22 }}>
+            Hi, Welcome Back
+          </Text>
+        </View>
         <View style={styles.head}>
-          <View style={[styles.result, { backgroundColor: "#e00808" }]}>
-            <ArrowDown color="white" size={40} />
-            <Text style={styles.text}>Expense</Text>
-            <Text style={styles.text}>${expense}</Text>
+          <View style={styles.result}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <ArrowDown color="white" size={14} />
+              <Text style={styles.text}>Expense</Text>
+            </View>
+            <Text style={[styles.value, { color: "#e00808" }]}>${expense}</Text>
           </View>
-          <View style={[styles.result, { backgroundColor: "#0f766e" }]}>
-            <ArrowUpRight color="white" size={40} />
-            <Text style={styles.text}>Income</Text>
-            <Text style={styles.text}>${income}</Text>
+          <View
+            style={{
+              width: 1,
+              height: "60%",
+              backgroundColor: "rgba(255,255,255,0.3)",
+              marginHorizontal: 16,
+              alignSelf: "center",
+              borderRadius: 1,
+            }}
+          />
+          <View style={styles.result}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <ArrowUpRight color="white" size={14} />
+              <Text style={styles.text}>Income</Text>
+            </View>
+            <Text style={[styles.value, { color: "#00f766" }]}>${income}</Text>
           </View>
-          <View style={[styles.result, { backgroundColor: "#918d8d" }]}>
-            <Equal color="white" size={40} />
-            <Text style={styles.text}>Total</Text>
+          <View
+            style={{
+              width: 1,
+              height: "60%",
+              backgroundColor: "rgba(255,255,255,0.3)",
+              marginHorizontal: 16,
+              alignSelf: "center",
+              borderRadius: 1,
+            }}
+          />
+          <View style={styles.result}>
+            <View style={{ alignItems: "center" }}>
+              <Text style={styles.text}>Balance</Text>
+            </View>
             <Text
               style={[
-                styles.text,
+                styles.value,
                 {
-                  color: String(balance).startsWith("-")
-                    ? "#e00808"
-                    : "#0f766e",
+                  color: "#3f7fe0",
                 },
               ]}
             >
@@ -230,17 +291,83 @@ export default function Dashboard() {
           </View>
         </View>
         <View style={styles.transactionsContainer}>
-          <Text style={styles.titleList}>Transaction List</Text>
           <View
-            style={{ flexDirection: "row", width: "92%", paddingVertical: 8 }}
+            style={{
+              flexDirection: "row",
+              width: "85%",
+              alignSelf: "center",
+              padding: 6,
+              backgroundColor: "#99cde9",
+              borderRadius: 20,
+            }}
           >
-            {headerData.map((item, index) => (
-              <View key={index} style={{ flex: 1, alignItems: "flex-start" }}>
-                <Text style={styles.listHeaderItem} numberOfLines={1}>
-                  {item.key}
-                </Text>
-              </View>
-            ))}
+            <Pressable
+              style={{ flex: 1 }}
+              onPressIn={onPressIn}
+              onPressOut={onPressOut}
+              onPress={() => {
+                setSelect("day");
+                filterByDay();
+              }}
+            >
+              <Animated.View
+                style={[
+                  {
+                    transform: [{ scale }],
+                    borderRadius: 20,
+                  },
+                  select === "day" && { backgroundColor: "#4382ca" },
+                ]}
+              >
+                <Animated.Text style={styles.listHeaderItem}>Day</Animated.Text>
+              </Animated.View>
+            </Pressable>
+            <Pressable
+              style={{ flex: 1 }}
+              onPressIn={onPressIn}
+              onPressOut={onPressOut}
+              onPress={() => {
+                setSelect("weekly");
+                filterByWeekly()
+              }}
+            >
+              <Animated.View
+                style={[
+                  {
+                    transform: [{ scale }],
+                    borderRadius: 20,
+                  },
+                  select === "weekly" && { backgroundColor: "#4382ca" },
+                ]}
+              >
+                <Animated.Text style={styles.listHeaderItem}>
+                  Weekly
+                </Animated.Text>
+              </Animated.View>
+            </Pressable>
+            <Pressable
+              style={{ flex: 1 }}
+              onPressIn={onPressIn}
+              onPressOut={onPressOut}
+              onPress={() => {
+                setSelect("month");
+                filterByMonth();
+              }}
+            >
+              <Animated.View
+                style={[
+                  {
+                    transform: [{ scale }],
+                    borderRadius: 20,
+                  },
+                  select === "month" && { backgroundColor: "#4382ca" },
+                ]}
+              >
+                <Animated.Text style={styles.listHeaderItem}>
+                  Month
+                </Animated.Text>
+              </Animated.View>
+            </Pressable>
           </View>
           <FlatList
             data={filteredItems}
@@ -248,28 +375,63 @@ export default function Dashboard() {
             contentContainerStyle={{ paddingVertical: 10 }}
             renderItem={({ item }) => (
               <View style={styles.transactionRow}>
-                <Text style={styles.listItem}>{item.description}</Text>
-                <Text
-                  style={[
-                    styles.listItem,
-                    {
-                      color: String(item.amount).startsWith("-")
-                        ? "#e00808"
-                        : "#0f766e",
-                    },
-                  ]}
-                >
-                  {item.amount}
-                </Text>
+                <View style={{ flexDirection: "column" }}>
+                  <Text style={[styles.listItem, { fontSize: 18 }]}>
+                    {item.description}
+                  </Text>
+                  <Text style={[styles.listItem, { color: "#0404f6" }]}>
+                    {item.date}
+                  </Text>
+                </View>
+                <View
+                  style={{
+                    width: 1,
+                    height: "70%",
+                    backgroundColor: "#1e293b",
+                    alignSelf: "center",
+                    borderRadius: 1,
+                  }}
+                />
                 <Text style={styles.listItem}>{item.category}</Text>
-                <Text style={styles.listItem}>{item.date}</Text>
-                <Text
-                  style={{ color: "#fff", fontWeight: 700 }}
-                  key={item.id}
-                  onPress={() => handleDeleteItem(item.id)}
+                <View
+                  style={{
+                    width: 1,
+                    height: "70%",
+                    backgroundColor: "#1e293b",
+                    alignSelf: "center",
+                    borderRadius: 1,
+                  }}
+                />
+                <View
+                  style={{
+                    flexDirection: "row",
+                    gap: 16,
+                    alignItems: "center",
+                  }}
                 >
-                  X
-                </Text>
+                  <Text
+                    style={[
+                      styles.listItem,
+                      {
+                        color: String(item.amount).startsWith("-")
+                          ? "#e00808"
+                          : "#0f766e",
+                      },
+                    ]}
+                  >
+                    {String(item.amount).startsWith("-")
+                      ? `-$${String(item.amount).slice(1)}`
+                      : `$${item.amount}`}
+                  </Text>
+
+                  <Text
+                    style={{ color: "#fff", fontWeight: 700 }}
+                    key={item.id}
+                    onPress={() => handleDeleteItem(item.id)}
+                  >
+                    X
+                  </Text>
+                </View>
               </View>
             )}
           />
@@ -362,9 +524,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#1e293b",
-    paddingHorizontal: 20,
   },
   text: {
+    color: "#f1f5f9",
+    fontSize: 14,
+  },
+  period: {
+    paddingVertical: 4,
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexDirection: "row",
+  },
+  value: {
+    fontSize: 24,
+    fontWeight: 600,
     color: "#f1f5f9",
   },
   head: {
@@ -372,11 +545,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     alignItems: "center",
     paddingVertical: 10,
+    paddingHorizontal: 20,
   },
   title: {
     fontWeight: "bold",
     fontSize: 36,
-    color: "#f1f5f9",
+    color: "#9bafc4",
     marginBottom: 10,
   },
   titleList: {
@@ -384,7 +558,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontWeight: "600",
     textTransform: "uppercase",
-    color: "#f1f5f9",
+    color: "#1e293b",
   },
   result: {
     alignItems: "center",
@@ -392,29 +566,32 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   transactionsContainer: {
-    borderWidth: 1,
-    borderColor: "#f1f5f9",
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingLeft: 10,
-    marginVertical: 10,
+    flex: 1,
+    backgroundColor: "#dde4eb",
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    padding: 20,
+    marginTop: 30,
   },
   listHeaderItem: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#f1f5f9",
+    fontWeight: "700",
+    color: "#1e293b",
+    textAlign: "center",
+    padding: 16,
   },
   transactionRow: {
     flexDirection: "row",
     width: "100%",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
+    paddingVertical: 4,
+    marginBottom: 8,
+    justifyContent: "space-around",
+    alignItems: "center",
   },
   listItem: {
     fontSize: 16,
-    width: "23%",
-    color: "#f1f5f9",
+    color: "#1e293b",
+    fontWeight: "600",
   },
   fab: {
     position: "absolute",

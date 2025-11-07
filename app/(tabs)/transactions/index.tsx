@@ -39,7 +39,7 @@ export default function HomeScreen() {
       prevItem.map((item) =>
         item.id === id ? { ...item, paid: !item.paid } : item
       )
-    );
+);
   };
   const separateByCategory = (items: Transaction[]) => {
     const totalExpenses = items
@@ -54,13 +54,13 @@ export default function HomeScreen() {
         expensesByCategory[item.category] += Math.abs(item.amount);
       }
     });
+
     const chartData = Object.entries(expensesByCategory).map(
       ([category, amount]) => ({
         category,
         amount,
       })
     );
-
     const percentageData = Object.entries(expensesByCategory).map(
       ([category, value]) => ({
         category,
@@ -95,6 +95,7 @@ export default function HomeScreen() {
   const closeModal = () => setVisible(false);
 
   const categories = ["Foods", "Fixes", "Others"];
+  
   const paidOptions = [
     {
       label: "Paid",
@@ -224,7 +225,7 @@ export default function HomeScreen() {
             keyExtractor={(item) => item}
           />
 
-          <Text style={styles.title}>Filtrar por data</Text>
+          <Text style={styles.title}>Filtrar por Status</Text>
           <FlatList
             data={paidOptions}
             horizontal
