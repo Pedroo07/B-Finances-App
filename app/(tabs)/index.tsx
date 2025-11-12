@@ -1,14 +1,55 @@
-import React from "react";
-import { FlatList, Text, View, StyleSheet } from "react-native";
+import { Container } from "@/components/container";
+import { Transaction } from "@/lib/entities/transaction";
+import React, { useState } from "react";
+import { Text, View, StyleSheet } from "react-native";
+import { v4 as uuidv4 } from "uuid";
+import credits from "../../credits.json";
+import { GraphicPie } from "@/components/graphic";
 
 export default function HomeScreen() {
-  const transactions = [
-    { description: "Groceries", value: "150.00" },
-    { description: "Rent", value: "50.00" },
-    { description: "Rent", value: "50.00" },
-    { description: "Rent", value: "50.00" },
-    { description: "Rent", value: "50.00" },
+  const [items, setItems] = useState<Transaction[]>(
+    credits.map((item) => ({ ...item, id: uuidv4() }))
+  );
+
+  const filteredItems = items.filter((item) => {
+    const [day, month] = item.date.split("/").map(Number);
+
+    if (month === new Date().getMonth() + 1) return true;
+  });
+
+  const sortItemByDate = (items: Transaction[]): Transaction[] => {
+    return [...items].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+  };
+  const cauculateTotal = () => {
+    let TotalExpense = 0;
+    items.forEach((item) => (TotalExpense += Math.abs(item.amount)));
+    return TotalExpense;
+  };
+
+  const handleDeleteItem = (id: string) => {
+    const deleteItem = items.filter((item) => item.id !== id);
+
+    setItems(sortItemByDate(deleteItem));
+  };
+  const colors = [
+    "#093a83",
+    "#114b8d",
+    "#0658a0",
+    "#1976D2",
+    "#0B3C91",
+    "#08306B",
   ];
+
+  const results = filteredItems.map((item, index) => ({
+    ...item,
+    name: item.description,
+    amount: Math.abs(item.amount),
+    color: colors[index % colors.length],
+    legendFontColor: "#fff",
+    legendFontSize: "14",
+  }));
   return (
     <View style={styles.container}>
       <View>
@@ -31,7 +72,7 @@ export default function HomeScreen() {
               fontWeight: "800",
             }}
           >
-            $1,280.45
+            ${cauculateTotal()}.00
           </Text>
         </View>
         <View
@@ -45,38 +86,11 @@ export default function HomeScreen() {
           <Text style={{ fontWeight: "500", color: "#1e293b" }}>Ouctober</Text>
         </View>
       </View>
-      <View style={styles.graph}>
-        <Text>Grafico</Text>
-      </View>
-      <View>
-        <Text
-          style={{
-            fontSize: 20,
-            fontWeight: "700",
-            textTransform: "uppercase",
-            padding: 10,
-            color: "#1e293b",
-          }}
-        >
-          Trasactions
-        </Text>
-        <FlatList
-          data={transactions}
-          keyExtractor={(item, index) => index.toString()}
-          contentContainerStyle={{ paddingVertical: 10 }}
-          renderItem={({ item }) => (
-            <View style={styles.transactionRow}>
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-              >
-                <Text>I</Text>
-                <Text style={styles.listItem}>{item.description}</Text>
-              </View>
-              <Text style={[styles.listItem, { color: "#e00808" }]}>
-                {item.value}
-              </Text>
-            </View>
-          )}
+      <GraphicPie result={results} acessor={"amount"} />
+      <View style={styles.transactionsContainer}>
+        <Container
+          filteredItems={filteredItems}
+          handleDeleteItem={handleDeleteItem}
         />
       </View>
     </View>
@@ -85,23 +99,29 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 10,
-    alignItems: "center",
-    backgroundColor: "#f1f5f9",
+    backgroundColor: "#1e293b",
   },
   title: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#1e293b",
+    color: "#f1f5f9",
     marginBottom: 10,
     marginTop: 20,
     textAlign: "center",
     textTransform: "uppercase",
   },
+  transactionsContainer: {
+    flex: 1,
+    backgroundColor: "#dde4eb",
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    padding: 20,
+    marginTop: 30,
+  },
   graph: {
     width: "80%",
     height: 160,
-    backgroundColor: "#1e293b",
+    backgroundColor: "#f1f5f9",
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 6,

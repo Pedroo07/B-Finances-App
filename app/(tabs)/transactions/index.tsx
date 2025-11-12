@@ -17,7 +17,7 @@ import {
   Modal,
   Portal,
 } from "react-native-paper";
-import Graphic from "@/components/graphic";
+import {GraphicBar} from "@/components/graphic";
 
 type Filter = {
   paid: boolean | null;
@@ -137,7 +137,7 @@ export default function HomeScreen() {
         />
         <IconButton icon="filter-variant" onPress={openModal} />
       </View>
-      <Graphic result={result} />
+      <GraphicBar result={result} />
       <View
         style={{ width: "100%", alignItems: "center", marginTop: 20, flex: 1 }}
       >

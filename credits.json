@@ -1,0 +1,25 @@
+[
+  {
+    "description": "parfum",
+    "amount": -330.0,
+    "date": "11/11",
+    "category": "Others",
+    "type": "expense",
+    "paid": false
+  },
+  {
+    "description": "Groceries",
+    "amount": -150.0,
+    "date": "10/11",
+    "category": "Fixes",
+    "type": "expense",
+    "paid": false
+  },
+  {
+    "description": "Rent",
+    "amount": -50,
+    "date": "20/10",
+    "category": "Others",
+    "type": "expense" 
+  }
+]

@@ -2,7 +2,6 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   TouchableWithoutFeedback,
   Keyboard,
@@ -12,7 +11,7 @@ import {
 import "react-native-get-random-values";
 import { v4 as uuidv4 } from "uuid";
 import { ArrowDown, ArrowUpRight } from "lucide-react-native";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import transactions from "../../../transactions.json";
 import {
   Button,
@@ -23,6 +22,7 @@ import {
   TextInput,
 } from "react-native-paper";
 import { Transaction } from "@/lib/entities/transaction";
+import { Container } from "@/components/container";
 
 type Filter =
   | { type: "day"; day: number }
@@ -78,17 +78,14 @@ export default function Dashboard() {
     endWeek.setHours(23, 59, 59, 99);
     setFilter({ type: "weekly", start: startWeek, end: endWeek });
   };
-
   const filterByMonth = () => {
     const today = new Date();
     setFilter({ type: "month", month: today.getMonth() + 1 });
   };
-
   const filterByDay = () => {
     const today = new Date();
     setFilter({ type: "day", day: today.getDate() });
   };
-
   const filteredItems = items.filter((item) => {
     const dateItem = createDateFromDDMM(item.date);
     const dayOfMonth = dateItem.getDate();
@@ -108,13 +105,11 @@ export default function Dashboard() {
         return true;
     }
   });
-
   const sortItemByDate = (items: Transaction[]): Transaction[] => {
     return [...items].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
   };
-
   const dateHandleChange = (text: string) => {
     let cleaned = text.replace(/\D/g, "");
 
@@ -126,28 +121,6 @@ export default function Dashboard() {
     if (cleaned.length >= 3) formated += "/" + cleaned.slice(2, 4);
 
     setDate(formated);
-  };
-   const caulculateCurrentMonthTotals = () => {
-    let totalExpense = 0;
-    let totalIncome = 0;
-    const today = new Date();
-    const currentYear = today.getFullYear();
-
-    items.forEach((item) => {
-      const [day, month] = item.date.split("/").map(Number);
-      const year = currentYear;
-      if (year === currentYear && month === selectedMonth)
-        if (item.amount > 0) {
-          totalIncome += item.amount;
-        } else {
-          totalExpense += Math.abs(item.amount);
-        }
-    });
-    return {
-      income: totalIncome,
-      expense: totalExpense,
-      balance: totalIncome - totalExpense,
-    };
   };
   const calculateTotals = (
     items: Transaction[]
@@ -169,6 +142,17 @@ export default function Dashboard() {
       balance: totalIncome - totalExpense,
     };
   };
+  useEffect(() => {
+    const sortedItems = sortItemByDate(filteredItems);
+    const filterItems = sortedItems.filter((item) => {
+      const [day, month] = item.date.split("/").map(Number);
+      return  month === new Date().getMonth() + 1;
+    });
+    const { income, expense, balance } = calculateTotals(filterItems);
+    setIncome(income);
+    setExpense(expense);
+    setBalance(balance);
+  }, []);
   const handleAddNewItem = () => {
     if (!description || !value || !date || !category) {
       alert("Preencha todos os campos!");
@@ -193,7 +177,7 @@ export default function Dashboard() {
     const filterItems = sortedItems.filter((item) => {
       const [day, month] = item.date.split("/").map(Number);
       const year = currentYear;
-      return year === currentYear && month === selectedMonth;
+      return year === currentYear && month === new Date().getMonth() + 1;
     });
     const { income, expense, balance } = calculateTotals(filterItems);
 
@@ -210,17 +194,15 @@ export default function Dashboard() {
     setCategory("");
   };
   const handleDeleteItem = (id: string) => {
-    const deleteItem = filteredItems.filter((item) => item.id !== id);
-
-    const today = new Date();
-    const currentYear = today.getFullYear();
+    const deleteItem = items.filter((item) => item.id !== id);
 
     const sortedItems = sortItemByDate(deleteItem);
 
     const filterItems = sortedItems.filter((item) => {
       const [day, month] = item.date.split("/").map(Number);
-      const year = currentYear;
-      return year === currentYear && month === selectedMonth;
+      const dateItem = createDateFromDDMM(item.date);
+      const dayOfMonth = dateItem.getDate();
+      return day === dayOfMonth && month === new Date().getMonth() + 1;
     });
 
     const { income, expense, balance } = calculateTotals(filterItems);
@@ -328,7 +310,7 @@ export default function Dashboard() {
               onPressOut={onPressOut}
               onPress={() => {
                 setSelect("weekly");
-                filterByWeekly()
+                filterByWeekly();
               }}
             >
               <Animated.View
@@ -369,73 +351,8 @@ export default function Dashboard() {
               </Animated.View>
             </Pressable>
           </View>
-          <FlatList
-            data={filteredItems}
-            keyExtractor={(item, index) => index.toString()}
-            contentContainerStyle={{ paddingVertical: 10 }}
-            renderItem={({ item }) => (
-              <View style={styles.transactionRow}>
-                <View style={{ flexDirection: "column" }}>
-                  <Text style={[styles.listItem, { fontSize: 18 }]}>
-                    {item.description}
-                  </Text>
-                  <Text style={[styles.listItem, { color: "#0404f6" }]}>
-                    {item.date}
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    width: 1,
-                    height: "70%",
-                    backgroundColor: "#1e293b",
-                    alignSelf: "center",
-                    borderRadius: 1,
-                  }}
-                />
-                <Text style={styles.listItem}>{item.category}</Text>
-                <View
-                  style={{
-                    width: 1,
-                    height: "70%",
-                    backgroundColor: "#1e293b",
-                    alignSelf: "center",
-                    borderRadius: 1,
-                  }}
-                />
-                <View
-                  style={{
-                    flexDirection: "row",
-                    gap: 16,
-                    alignItems: "center",
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.listItem,
-                      {
-                        color: String(item.amount).startsWith("-")
-                          ? "#e00808"
-                          : "#0f766e",
-                      },
-                    ]}
-                  >
-                    {String(item.amount).startsWith("-")
-                      ? `-$${String(item.amount).slice(1)}`
-                      : `$${item.amount}`}
-                  </Text>
-
-                  <Text
-                    style={{ color: "#fff", fontWeight: 700 }}
-                    key={item.id}
-                    onPress={() => handleDeleteItem(item.id)}
-                  >
-                    X
-                  </Text>
-                </View>
-              </View>
-            )}
-          />
-        </View>
+          <Container filteredItems={filteredItems} handleDeleteItem={handleDeleteItem}/>
+        </View> 
         <View>
           <TouchableOpacity
             style={styles.fab}
@@ -570,7 +487,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#dde4eb",
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
-    padding: 20,
+    padding: 10,
     marginTop: 30,
   },
   listHeaderItem: {
