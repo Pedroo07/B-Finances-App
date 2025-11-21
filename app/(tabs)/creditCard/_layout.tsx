@@ -1,10 +1,16 @@
-import { Stack } from 'expo-router'
-import React from 'react'
+import { Stack } from "expo-router";
+import React from "react";
+import { PaperProvider } from "react-native-paper";
 
 export default function ProductLayout() {
   return (
-    <Stack>
-      <Stack.Screen name="index" options={{ title: 'CreditCard', headerShown: false }} />
-    </Stack>
-  )
+    <PaperProvider>
+      <Stack>
+        <Stack.Screen
+          name="index"
+          options={{ title: "CreditCard", headerShown: false }}
+        />
+      </Stack>
+    </PaperProvider>
+  );
 }

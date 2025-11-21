@@ -1,0 +1,72 @@
+{
+  "Caixa": {
+    "primaryColor": "#005CA9",
+    "secondaryColor": "#F2A900",
+    "gradient": ["#005CA9", "#003F6B"],
+    "logo": "assets/images/caixa.png",
+    "brand": "Visa"
+  },
+  "Bradesco": {
+    "primaryColor": "#CC092F",
+    "secondaryColor": "#FFFFFF",
+    "gradient": ["#CC092F", "#8A001B"],
+    "logo": "assets/images/bradesco.png",
+    "brand": "Mastercard"
+  },
+  "Nubank": {
+    "primaryColor": "#8A05BE",
+    "secondaryColor": "#5C0588",
+    "gradient": ["#8A05BE", "#43025C"],
+    "logo": "assets/images/nu.png",
+    "brand": "Mastercard"
+  },
+  "Itaú": {
+    "primaryColor": "#002561",
+    "secondaryColor": "#FF6900",
+    "gradient": ["#FF6900", "#B84E00"],
+    "logo": "assets/images/itau.png",
+    "brand": "Visa"
+  },
+  "Banco do Brasil": {
+    "primaryColor": "#F7D117",
+    "secondaryColor": "#1E3A8A",
+    "gradient": ["#F7D117", "#C9A400"],
+    "logo": "assets/images/bb.png",
+    "brand": "Elo"
+  },
+  "Santander": {
+    "primaryColor": "#FFFFFF",
+    "secondaryColor": "#EC0000",
+    "gradient": ["#EC0000", "#8C0000"],
+    "logo": "assets/images/santander.png",
+    "brand": "Mastercard"
+  },
+  "PicPay": {
+    "primaryColor": "#21C25E",
+    "secondaryColor": "#0A9D47",
+    "gradient": ["#21C25E", "#0A9D47"],
+    "logo": "assets/images/picpay.png",
+    "brand": "Visa"
+  },
+  "Banco Inter": {
+    "primaryColor": "#FF6F00",
+    "secondaryColor": "#B84F00",
+    "gradient": ["#FF6F00", "#B84F00"],
+    "logo": "assets/images/inter.png",
+    "brand": "Mastercard"
+  },
+  "Mercado Pago": {
+    "primaryColor": "#009EE3",
+    "secondaryColor": "#005B8F",
+    "gradient": ["#009EE3", "#005B8F"],
+    "logo": "assets/images/mercadopago.png",
+    "brand": "Visa"
+  },
+  "PagBank": {
+    "primaryColor": "#00C853",
+    "secondaryColor": "#00893C",
+    "gradient": ["#00C853", "#00893C"],
+    "logo": "assets/images/pagbank.png",
+    "brand": "Visa"
+  }
+}

@@ -54,27 +54,27 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <View>
         <Text style={styles.title}>Credit Card</Text>
-        <View
-          style={{
-            backgroundColor: "#1e293b",
-            padding: 20,
-            borderRadius: 8,
-            marginTop: 10,
-            marginBottom: 10,
-            width: "100%",
-          }}
-        >
-          <Text
+          <View
             style={{
-              color: "#fff",
-              textAlign: "center",
-              fontSize: 32,
-              fontWeight: "800",
+              backgroundColor: '#1e293b',
+              padding: 20,
+              borderRadius: 8,
+              marginTop: 10,
+              marginBottom: 10,
+              width: "100%",
             }}
           >
-            ${cauculateTotal()}.00
-          </Text>
-        </View>
+            <Text
+              style={{
+                color: "#fff",
+                textAlign: "center",
+                fontSize: 32,
+                fontWeight: "800",
+              }}
+            >
+              ${cauculateTotal()}.00
+            </Text>
+          </View>
         <View
           style={{
             flexDirection: "row",
