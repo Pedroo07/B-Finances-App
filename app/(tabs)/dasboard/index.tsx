@@ -23,6 +23,7 @@ import {
 } from "react-native-paper";
 import { Transaction } from "@/lib/entities/transaction";
 import { Container } from "@/components/container";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type Filter =
   | { type: "day"; day: number }
@@ -66,6 +67,7 @@ export default function Dashboard() {
   const [expense, setExpense] = useState<number>(0);
   const [income, setIncome] = useState<number>(0);
   const [balance, setBalance] = useState<number>(0);
+  const [logged, setLogged] = useState(true);
 
   const filterByWeekly = () => {
     const today = new Date();
@@ -142,17 +144,6 @@ export default function Dashboard() {
       balance: totalIncome - totalExpense,
     };
   };
-  useEffect(() => {
-    const sortedItems = sortItemByDate(filteredItems);
-    const filterItems = sortedItems.filter((item) => {
-      const [day, month] = item.date.split("/").map(Number);
-      return  month === new Date().getMonth() + 1;
-    });
-    const { income, expense, balance } = calculateTotals(filterItems);
-    setIncome(income);
-    setExpense(expense);
-    setBalance(balance);
-  }, []);
   const handleAddNewItem = () => {
     if (!description || !value || !date || !category) {
       alert("Preencha todos os campos!");
@@ -170,22 +161,22 @@ export default function Dashboard() {
     const itemsArray = [...filteredItems, newItem];
     const sortedItems = sortItemByDate(itemsArray);
     setItems(sortedItems);
-
+    
     const today = new Date();
     const currentYear = today.getFullYear();
-
+    
     const filterItems = sortedItems.filter((item) => {
       const [day, month] = item.date.split("/").map(Number);
       const year = currentYear;
       return year === currentYear && month === new Date().getMonth() + 1;
     });
     const { income, expense, balance } = calculateTotals(filterItems);
-
+    
     setIncome(income);
     setExpense(expense);
     setBalance(balance);
     setItems(sortedItems);
-
+    
     setDialogVisible(false);
     setDescription("");
     setValue(0);
@@ -195,23 +186,34 @@ export default function Dashboard() {
   };
   const handleDeleteItem = (id: string) => {
     const deleteItem = items.filter((item) => item.id !== id);
-
+    
     const sortedItems = sortItemByDate(deleteItem);
-
+    
     const filterItems = sortedItems.filter((item) => {
       const [day, month] = item.date.split("/").map(Number);
       const dateItem = createDateFromDDMM(item.date);
       const dayOfMonth = dateItem.getDate();
       return day === dayOfMonth && month === new Date().getMonth() + 1;
     });
-
+    
     const { income, expense, balance } = calculateTotals(filterItems);
-
+    
     setIncome(income);
     setExpense(expense);
     setBalance(balance);
     setItems(sortedItems);
   };
+  useEffect(() => {
+    const sortedItems = sortItemByDate(filteredItems);
+    const filterItems = sortedItems.filter((item) => {
+      const [day, month] = item.date.split("/").map(Number);
+      return month === new Date().getMonth() + 1;
+    });
+    const { income, expense, balance } = calculateTotals(filterItems);
+    setIncome(income);
+    setExpense(expense);
+    setBalance(balance);
+  }, []);
 
   return (
     <PaperProvider>
@@ -351,8 +353,11 @@ export default function Dashboard() {
               </Animated.View>
             </Pressable>
           </View>
-          <Container filteredItems={filteredItems} handleDeleteItem={handleDeleteItem}/>
-        </View> 
+          <Container
+            filteredItems={filteredItems}
+            handleDeleteItem={handleDeleteItem}
+          />
+        </View>
         <View>
           <TouchableOpacity
             style={styles.fab}

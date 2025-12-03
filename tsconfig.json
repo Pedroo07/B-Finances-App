@@ -16,5 +16,5 @@
     "**/*.js",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-  ]
+, "app/login.tsx"  ]
 }
