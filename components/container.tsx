@@ -1,4 +1,5 @@
 import { Transaction } from "@/lib/entities/transaction";
+import { format, parse } from "date-fns";
 import React from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
 
@@ -8,6 +9,10 @@ type TransactionItem = {
   filteredItems : Transaction[]
   handleDeleteItem: (id: string) => void
 }
+const formatData = (text: string) => {
+    const parsed = parse(text, "yyyy-MM-dd", new Date())
+    return format(parsed, "dd/MM")
+  };
 
 export const Container = ({filteredItems , handleDeleteItem}: TransactionItem) => {
   return (
@@ -23,7 +28,7 @@ export const Container = ({filteredItems , handleDeleteItem}: TransactionItem) =
                 {item.description}
               </Text>
               <Text style={[styles.listItem, { color: "#0404f6" }]}>
-                {item.date}
+                {formatData(item.date)}
               </Text>
             </View>
             <View

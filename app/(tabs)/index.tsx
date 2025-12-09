@@ -3,20 +3,19 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 export default function HomeScreen() {
-  const [logged, setLogged] = useState(false)
+  const [logged, setLogged] = useState(true)
 
   useEffect(()=>{
     const checkLogin = async () => {
       const token = await AsyncStorage.getItem("token")
       setLogged(!!token)
+      if(!logged){
+        router.replace("/login")
+      }
     }
-
     checkLogin()
   },[])
 
-  if(!logged){
-    router.replace("..")
-  }
   return (
     
     <View>

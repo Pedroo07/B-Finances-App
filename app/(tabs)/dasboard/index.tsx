@@ -12,7 +12,6 @@ import "react-native-get-random-values";
 import { v4 as uuidv4 } from "uuid";
 import { ArrowDown, ArrowUpRight } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import transactions from "../../../transactions.json";
 import {
   Button,
   Dialog,
@@ -24,6 +23,9 @@ import {
 import { Transaction } from "@/lib/entities/transaction";
 import { Container } from "@/components/container";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getUserCollection } from "@/lib/services/transactions";
+import { router } from "expo-router";
+import {parse, format} from "date-fns"
 
 type Filter =
   | { type: "day"; day: number }
@@ -47,15 +49,11 @@ export default function Dashboard() {
     }).start();
   };
   function createDateFromDDMM(ddmm: string): Date {
-    const [day, month] = ddmm.split("/").map(Number);
-    const currentYear = new Date().getFullYear();
-    return new Date(currentYear, month - 1, day);
+    const [year, month, day] = ddmm.split("-").map(Number);
+    return new Date(year, month - 1, day);
   }
   const [filter, setFilter] = useState<Filter>(() => ({ type: "none" }));
-
-  const [items, setItems] = useState<Transaction[]>(
-    transactions.map((item) => ({ ...item, id: uuidv4() }))
-  );
+  const [items, setItems] = useState<Transaction[]>([]);
   const [description, setDescription] = React.useState("");
   const [value, setValue] = React.useState(0);
   const [date, setDate] = React.useState("");
@@ -68,6 +66,11 @@ export default function Dashboard() {
   const [income, setIncome] = useState<number>(0);
   const [balance, setBalance] = useState<number>(0);
   const [logged, setLogged] = useState(true);
+
+  const handleFecthTransaction = async () => {
+    const transactions: Transaction[] = (await getUserCollection()) || [];
+    setItems(transactions);
+  };
 
   const filterByWeekly = () => {
     const today = new Date();
@@ -89,7 +92,7 @@ export default function Dashboard() {
     setFilter({ type: "day", day: today.getDate() });
   };
   const filteredItems = items.filter((item) => {
-    const dateItem = createDateFromDDMM(item.date);
+    const dateItem = createDateFromDDMM(item.date)
     const dayOfMonth = dateItem.getDate();
     const month = dateItem.getMonth() + 1;
 
@@ -112,15 +115,18 @@ export default function Dashboard() {
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
   };
+
   const dateHandleChange = (text: string) => {
     let cleaned = text.replace(/\D/g, "");
 
-    if (cleaned.length > 4) cleaned = cleaned.slice(0, 4);
+    if (cleaned.length > 8) cleaned = cleaned.slice(0, 8);
 
     let formated = "";
 
     if (cleaned.length >= 1) formated += cleaned.slice(0, 2);
     if (cleaned.length >= 3) formated += "/" + cleaned.slice(2, 4);
+    if (cleaned.length >= 5) formated += "/" + cleaned.slice(4, 8);
+    
 
     setDate(formated);
   };
@@ -161,22 +167,22 @@ export default function Dashboard() {
     const itemsArray = [...filteredItems, newItem];
     const sortedItems = sortItemByDate(itemsArray);
     setItems(sortedItems);
-    
+
     const today = new Date();
     const currentYear = today.getFullYear();
-    
+
     const filterItems = sortedItems.filter((item) => {
-      const [day, month] = item.date.split("/").map(Number);
-      const year = currentYear;
+      const [year, month, day] = item.date.split("/").map(Number);
+
       return year === currentYear && month === new Date().getMonth() + 1;
     });
     const { income, expense, balance } = calculateTotals(filterItems);
-    
+
     setIncome(income);
     setExpense(expense);
     setBalance(balance);
     setItems(sortedItems);
-    
+
     setDialogVisible(false);
     setDescription("");
     setValue(0);
@@ -186,18 +192,18 @@ export default function Dashboard() {
   };
   const handleDeleteItem = (id: string) => {
     const deleteItem = items.filter((item) => item.id !== id);
-    
+
     const sortedItems = sortItemByDate(deleteItem);
-    
+
     const filterItems = sortedItems.filter((item) => {
-      const [day, month] = item.date.split("/").map(Number);
+      const [year, month, day] = item.date.split("/").map(Number);
       const dateItem = createDateFromDDMM(item.date);
       const dayOfMonth = dateItem.getDate();
-      return day === dayOfMonth && month === new Date().getMonth() + 1;
+      return day === dayOfMonth && month === new Date().getMonth() +1
     });
-    
+
     const { income, expense, balance } = calculateTotals(filterItems);
-    
+
     setIncome(income);
     setExpense(expense);
     setBalance(balance);
@@ -206,9 +212,19 @@ export default function Dashboard() {
   useEffect(() => {
     const sortedItems = sortItemByDate(filteredItems);
     const filterItems = sortedItems.filter((item) => {
-      const [day, month] = item.date.split("/").map(Number);
+      const [year, month, day] = item.date.split("/").map(Number);
       return month === new Date().getMonth() + 1;
     });
+    const checkLogin = async () => {
+      const token = await AsyncStorage.getItem("token");
+      setLogged(!!token);
+      if (!logged) {
+        router.replace("/login");
+      }
+    };
+
+    checkLogin();
+    handleFecthTransaction();
     const { income, expense, balance } = calculateTotals(filterItems);
     setIncome(income);
     setExpense(expense);

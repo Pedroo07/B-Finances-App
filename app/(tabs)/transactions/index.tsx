@@ -5,9 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
-import React, { useState } from "react";
-import { v4 as uuidv4 } from "uuid";
-import transactions from "../../../transactions.json";
+import React, { useEffect, useState } from "react";
+import { getUserCollection } from "@/lib/services/transactions";
 import { Transaction } from "@/lib/entities/transaction";
 import Period from "@/app/(tabs)/dasboard/period";
 import {
@@ -17,7 +16,10 @@ import {
   Modal,
   Portal,
 } from "react-native-paper";
-import {GraphicBar} from "@/components/graphic";
+import { GraphicBar } from "@/components/graphic";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
+import { format, parse } from "date-fns";
 
 type Filter = {
   paid: boolean | null;
@@ -26,9 +28,12 @@ type Filter = {
 };
 
 export default function HomeScreen() {
-  const [items, setItems] = useState<Transaction[]>(
-    transactions.map((item) => ({ ...item, id: uuidv4() }))
-  );
+  const [items, setItems] = useState<Transaction[]>([]);
+  const [logged, setLogged] = useState(true);
+  const handleFecthTransaction = async () => {
+    const transactions: Transaction[] = (await getUserCollection()) || [];
+    setItems(transactions);
+  };
   const [filter, setFilter] = useState<Filter>({
     paid: null,
     categories: [],
@@ -39,7 +44,7 @@ export default function HomeScreen() {
       prevItem.map((item) =>
         item.id === id ? { ...item, paid: !item.paid } : item
       )
-);
+    );
   };
   const separateByCategory = (items: Transaction[]) => {
     const totalExpenses = items
@@ -72,9 +77,10 @@ export default function HomeScreen() {
   const handleMonthChange = (newMonth: number) => {
     setFilter((currentFilter) => ({ ...currentFilter, month: newMonth }));
   };
-
   const filteredItems = items.filter((item) => {
-    const [day, month] = item.date.split("/").map(Number);
+    const [year, month, day] = item.date
+      .split("-")
+      .map(Number);
 
     if (month !== filter.month) return false;
 
@@ -88,14 +94,13 @@ export default function HomeScreen() {
 
     return true;
   });
-
   const result = separateByCategory(filteredItems);
   const [visible, setVisible] = useState(false);
   const openModal = () => setVisible(true);
   const closeModal = () => setVisible(false);
 
   const categories = ["Foods", "Fixes", "Others"];
-  
+
   const paidOptions = [
     {
       label: "Paid",
@@ -103,6 +108,10 @@ export default function HomeScreen() {
     },
     { label: "Not Paid", value: false },
   ];
+  const formatData = (text: string) => {
+      const parsed = parse(text, "yyyy-MM-dd", new Date())
+      return format(parsed, "dd/MM")
+    };
   const toggleCategory = (category: string) => {
     setFilter((prev) => {
       const exist = prev.categories.includes(category);
@@ -121,6 +130,18 @@ export default function HomeScreen() {
       setFilter({ ...filter, paid: value });
     }
   };
+  useEffect(() => {
+    const checkLogin = async () => {
+      const token = await AsyncStorage.getItem("token");
+      setLogged(!!token);
+      if (!logged) {
+        router.replace("/login");
+      }
+    };
+    checkLogin();
+    handleFecthTransaction();
+  }, []);
+
   return (
     <View style={styles.container}>
       <View
@@ -163,7 +184,7 @@ export default function HomeScreen() {
                   )}
                   <Text style={styles.itemTransaction}>{item.description}</Text>
                 </View>
-                <Text style={styles.itemTransaction}>{item.date}</Text>
+                <Text style={styles.itemTransaction}>{formatData(item.date)}</Text>
               </View>
               <View style={styles.row}>
                 <Text
@@ -186,7 +207,7 @@ export default function HomeScreen() {
                       { backgroundColor: item.paid ? "#45db09" : "#a7811b" },
                     ]}
                   >
-                    {item.paid ? "Pago" : "Em aberto"}
+                    {item.paid ? "Paid" : "Payable"}
                   </Text>
                 )}
               </View>

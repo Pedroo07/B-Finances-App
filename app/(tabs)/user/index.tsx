@@ -6,7 +6,7 @@ import { router } from "expo-router";
 export default function User() {
   const SignOut = async () => {
          await AsyncStorage.removeItem("token");
-         router.replace("/");
+         router.replace("/login");
     }
   return (
     <View>

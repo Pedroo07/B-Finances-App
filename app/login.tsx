@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, Pressable, Image } from "react-native";
 import { TextInput } from "react-native-paper";
 import * as z from "zod";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getUserCollection } from "@/lib/services/transactions";
 
 const userSchema = z.object({
   email: z.email("Email Invalid"),
@@ -76,22 +77,23 @@ export default function Login() {
       setErrorMessage(result.error);
     } else {
       await AsyncStorage.setItem("token", result.data.idToken);
-      router.navigate("/dasboard");
+      await AsyncStorage.setItem("userId", result.data.localId);
+      router.navigate("/")
     }
   };
   useEffect(() => {
     const checkLogin = async () => {
       const token = await AsyncStorage.getItem("token");
       setLogged(!!token);
+      console.log(AsyncStorage.getItem("token"));
     };
-
+    
     checkLogin();
   }, []);
-
+  
   if (logged) {
-    return <Redirect href="/(tabs)/dasboard" />;
+    return <Redirect href="/(tabs)" />;
   }
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>

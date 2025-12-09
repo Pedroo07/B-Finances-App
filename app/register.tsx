@@ -1,3 +1,4 @@
+
 import { Link } from "expo-router";
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Pressable, Image } from "react-native";
@@ -72,6 +73,9 @@ export default function Register() {
       setErrorMessage(result.error);
     } else {
       setSuccessMessage("User cadastrado com sucesso");
+     
+      console.log(result.data.localId)
+      
     }
   };
   return (
