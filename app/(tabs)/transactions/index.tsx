@@ -29,9 +29,10 @@ type Filter = {
 
 export default function HomeScreen() {
   const [items, setItems] = useState<Transaction[]>([]);
+  const [itemsOff, setItemsOff] = useState<Transaction[]>([])
   const [logged, setLogged] = useState(true);
   const handleFecthTransaction = async () => {
-    const transactions: Transaction[] = (await getUserCollection()) || [];
+    const transactions: Transaction[] = (await getUserCollection());
     setItems(transactions);
   };
   const [filter, setFilter] = useState<Filter>({
@@ -77,7 +78,12 @@ export default function HomeScreen() {
   const handleMonthChange = (newMonth: number) => {
     setFilter((currentFilter) => ({ ...currentFilter, month: newMonth }));
   };
-  const filteredItems = items.filter((item) => {
+  const getItemsOff = () => {
+   const filterItems =  items.filter((item) => item.amount < 0)
+    setItemsOff(filterItems)
+    console.log(filterItems)
+  }
+  const filteredItems = itemsOff.filter((item) => {
     const [year, month, day] = item.date
       .split("-")
       .map(Number);
@@ -99,7 +105,7 @@ export default function HomeScreen() {
   const openModal = () => setVisible(true);
   const closeModal = () => setVisible(false);
 
-  const categories = ["Foods", "Fixes", "Others"];
+  const categories = ["foods", "fixes", "others"];
 
   const paidOptions = [
     {
@@ -136,10 +142,12 @@ export default function HomeScreen() {
       setLogged(!!token);
       if (!logged) {
         router.replace("/login");
+        return
       }
+      handleFecthTransaction();
+      getItemsOff()
     };
     checkLogin();
-    handleFecthTransaction();
   }, []);
 
   return (
