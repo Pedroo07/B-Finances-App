@@ -3,7 +3,6 @@ export type Transaction =  {
     date: string
     amount: number
     type: string
-    id: string
     category: string
     paid?: boolean
 }

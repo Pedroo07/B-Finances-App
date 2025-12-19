@@ -9,7 +9,6 @@ import {
   Animated,
 } from "react-native";
 import "react-native-get-random-values";
-import { v4 as uuidv4 } from "uuid";
 import { ArrowDown, ArrowUpRight } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -23,7 +22,7 @@ import {
 import { Transaction } from "@/lib/entities/transaction";
 import { Container } from "@/components/container";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createNewItem, getUserCollection } from "@/lib/services/transactions";
+import { createNewItem, deleteTransactionItem, getUserCollection, TransactionDto } from "@/lib/services/transactions";
 import { router } from "expo-router";
 
 type Filter =
@@ -51,7 +50,7 @@ export default function Dashboard() {
     return new Date(year, month - 1, day);
   }
   const [filter, setFilter] = useState<Filter>(() => ({ type: "month" , month: new Date().getMonth() +1}));
-  const [items, setItems] = useState<Transaction[]>([]);
+  const [items, setItems] = useState<TransactionDto[]>([]);
   const [description, setDescription] = React.useState("");
   const [value, setValue] = React.useState(0);
   const [date, setDate] = React.useState("");
@@ -66,7 +65,7 @@ export default function Dashboard() {
   const [logged, setLogged] = useState(true);
 
   const handleFecthTransaction = async () => {
-    const transactions: Transaction[] = (await getUserCollection()) || [];
+    const transactions: TransactionDto[] = (await getUserCollection()) || [];
     setItems(transactions);
   };
   const filterByWeekly = () => {
@@ -107,7 +106,7 @@ export default function Dashboard() {
         return true;
     }
   });
-  const sortItemByDate  = (items: Transaction[]): Transaction[] => {
+  const sortItemByDate  = (items: TransactionDto[]): TransactionDto[] => {
     return [...items].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
@@ -123,7 +122,7 @@ export default function Dashboard() {
     if (cleaned.length >= 3) formated += "/" + cleaned.slice(2, 4);
     if (cleaned.length >= 5) formated += "/" + cleaned.slice(4, 8);
     
-
+    
     setDate(formated);
   };
   const calculateTotals = (
@@ -146,7 +145,7 @@ export default function Dashboard() {
       balance: totalIncome - totalExpense,
     };
   };
-  const handleAddNewItem = () => {
+  const handleAddNewItem = async () => {
     if (!description || !value || !date || !category) {
       alert("Preencha todos os campos!");
       return;
@@ -154,13 +153,13 @@ export default function Dashboard() {
     const newItem: Transaction = {
       amount: -value,
       category: category,
-      date: date,
+      date: date.replaceAll("/", "-").split("-").reverse().join("-"),
       description: description,
-      id: uuidv4(),
       type: "expense",
       paid: category === "Fixes" ? false : undefined,
     };
-    const itemsArray = [...filteredItems, newItem];
+    const newTransaction = await createNewItem(newItem)
+    const itemsArray = [...filteredItems, newTransaction];
     const sortedItems = sortItemByDate(itemsArray);
     setItems(sortedItems);
 
@@ -185,11 +184,12 @@ export default function Dashboard() {
     setDate("");
     setSelected("Select Category");
     setCategory("");
-    createNewItem(newItem)
+    
   };
   const handleDeleteItem = (id: string) => {
     const deleteItem = items.filter((item) => item.id !== id);
-
+    
+    
     const sortedItems = sortItemByDate(deleteItem);
 
     const filterItems = sortedItems.filter((item) => {
@@ -200,6 +200,7 @@ export default function Dashboard() {
     });
 
     const { income, expense, balance } = calculateTotals(filterItems);
+    deleteTransactionItem(id)
 
     setIncome(income);
     setExpense(expense);
@@ -216,8 +217,6 @@ export default function Dashboard() {
       }
       handleFecthTransaction();
     };
-    
-
     checkLogin();
   }, []);
 

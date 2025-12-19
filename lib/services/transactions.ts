@@ -1,5 +1,5 @@
+import { Transaction } from "@/lib/entities/transaction";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { v4 as uuidv4 } from "uuid";
 
 type FirestoreValue<T> = T extends number
   ? { integerValue: string }
@@ -7,7 +7,7 @@ type FirestoreValue<T> = T extends number
   ? { stringValue: string }
   : never;
 
-  type TransactionFirestoreFields = {
+type TransactionFirestoreFields = {
   amount: FirestoreValue<number>;
   category: FirestoreValue<string>;
   date: FirestoreValue<string>;
@@ -16,6 +16,7 @@ type FirestoreValue<T> = T extends number
 };
 type FirestoreDocument<T> = {
   fields: T;
+  name: string;
 };
 type TransactionFirestoreDocument =
   FirestoreDocument<TransactionFirestoreFields>;
@@ -47,38 +48,42 @@ export async function getUserCollection(): Promise<TransactionDto[]> {
   );
   const data = await res.json();
   console.log(data);
-  const transactions: TransactionDto[] = data.documents.map((item: TransactionFirestoreDocument) => ({
-    id: uuidv4(),
-    date: item.fields.date.stringValue,
-    category: item.fields.category.stringValue,
-    description: item.fields.description.stringValue,
-    amount: Number(item.fields.amount.integerValue),
-    type: item.fields.type.stringValue,
-    ...item,
-  }));
+  const transactions: TransactionDto[] = data.documents.map(
+    (item: TransactionFirestoreDocument) => ({
+      id: item.name.split("/").pop(),
+      date: item.fields.date.stringValue,
+      category: item.fields.category.stringValue,
+      description: item.fields.description.stringValue,
+      amount: Number(item.fields.amount.integerValue),
+      type: item.fields.type.stringValue,
+      ...item,
+    })
+  );
 
   return transactions;
 }
-export async function createNewItem(item: TransactionDto): Promise<TransactionDto[]> {
+export async function createNewItem(
+  item: Transaction
+): Promise<TransactionDto> {
   function toFirestoreFields(data: Record<string, any>) {
-  const fields: Record<string, any> = {};
+    const fields: Record<string, any> = {};
 
-  for (const key in data) {
-    const value = data[key];
+    for (const key in data) {
+      const value = data[key];
 
-    if (typeof value === "string") {
-      fields[key] = { stringValue: value };
-    } else if (typeof value === "number") {
-      fields[key] = Number.isInteger(value)
-        ? { integerValue: value }
-        : { doubleValue: value };
-    } else if (typeof value === "boolean") {
-      fields[key] = { booleanValue: value };
+      if (typeof value === "string") {
+        fields[key] = { stringValue: value };
+      } else if (typeof value === "number") {
+        fields[key] = Number.isInteger(value)
+          ? { integerValue: value }
+          : { doubleValue: value };
+      } else if (typeof value === "boolean") {
+        fields[key] = { booleanValue: value };
+      }
     }
-  }
 
-  return fields;
-}
+    return fields;
+  }
   const userId = await AsyncStorage.getItem("userId");
   const token = await AsyncStorage.getItem("token");
   const res = await fetch(
@@ -90,9 +95,30 @@ export async function createNewItem(item: TransactionDto): Promise<TransactionDt
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        fields: toFirestoreFields(item)
-      })
+        fields: toFirestoreFields(item),
+      }),
     }
   );
-  return res
+  const json = await res.json();
+
+  return {
+    id: json.name.split("-").pop(),
+    ...item,
+  };
+}
+export async function deleteTransactionItem(id: string) {
+  const userId = await AsyncStorage.getItem("userId");
+  const token = await AsyncStorage.getItem("token");
+
+  const res = await fetch(
+    `https://firestore.googleapis.com/v1/projects/b-finances-2952b/databases/(default)/documents/users/${userId}/transactions/${id}`,
+    {
+      method: "DELETE",
+      headers: {
+        "content-type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  return res;
 }
