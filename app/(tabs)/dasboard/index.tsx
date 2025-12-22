@@ -22,13 +22,18 @@ import {
 import { Transaction } from "@/lib/entities/transaction";
 import { Container } from "@/components/container";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createNewItem, deleteTransactionItem, getUserCollection, TransactionDto } from "@/lib/services/transactions";
+import {
+  createNewItem,
+  deleteTransactionItem,
+  getUserCollection,
+  TransactionDto,
+} from "@/lib/services/transactions";
 import { router } from "expo-router";
 
 type Filter =
   | { type: "day"; day: number }
   | { type: "month"; month: number }
-  | { type: "weekly"; start: Date; end: Date }
+  | { type: "weekly"; start: Date; end: Date };
 
 export default function Dashboard() {
   const [select, setSelect] = useState("month");
@@ -49,7 +54,10 @@ export default function Dashboard() {
     const [year, month, day] = ddmm.split("-").map(Number);
     return new Date(year, month - 1, day);
   }
-  const [filter, setFilter] = useState<Filter>(() => ({ type: "month" , month: new Date().getMonth() +1}));
+  const [filter, setFilter] = useState<Filter>(() => ({
+    type: "month",
+    month: new Date().getMonth() + 1,
+  }));
   const [items, setItems] = useState<TransactionDto[]>([]);
   const [description, setDescription] = React.useState("");
   const [value, setValue] = React.useState(0);
@@ -87,14 +95,14 @@ export default function Dashboard() {
     const today = new Date();
     setFilter({ type: "day", day: today.getDate() });
   };
-  const  filteredItems  =  items.filter((item) => {
-    const dateItem = createDateFromDDMM(item.date)
+  const filteredItems = items.filter((item) => {
+    const dateItem = createDateFromDDMM(item.date);
     const dayOfMonth = dateItem.getDate();
     const month = dateItem.getMonth() + 1;
 
     switch (filter.type) {
       case "day":
-        return dayOfMonth === filter.day ;
+        return dayOfMonth === filter.day;
       case "month":
         return month === filter.month;
       case "weekly":
@@ -106,7 +114,7 @@ export default function Dashboard() {
         return true;
     }
   });
-  const sortItemByDate  = (items: TransactionDto[]): TransactionDto[] => {
+  const sortItemByDate = (items: TransactionDto[]): TransactionDto[] => {
     return [...items].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
@@ -121,8 +129,7 @@ export default function Dashboard() {
     if (cleaned.length >= 1) formated += cleaned.slice(0, 2);
     if (cleaned.length >= 3) formated += "/" + cleaned.slice(2, 4);
     if (cleaned.length >= 5) formated += "/" + cleaned.slice(4, 8);
-    
-    
+
     setDate(formated);
   };
   const calculateTotals = (
@@ -158,7 +165,7 @@ export default function Dashboard() {
       type: "expense",
       paid: category === "Fixes" ? false : undefined,
     };
-    const newTransaction = await createNewItem(newItem)
+    const newTransaction = await createNewItem(newItem);
     const itemsArray = [...filteredItems, newTransaction];
     const sortedItems = sortItemByDate(itemsArray);
     setItems(sortedItems);
@@ -184,28 +191,28 @@ export default function Dashboard() {
     setDate("");
     setSelected("Select Category");
     setCategory("");
-    
   };
-  const handleDeleteItem = (id: string) => {
+  const handleDeleteItem = async (id: string) => {
+    await deleteTransactionItem(id);
     const deleteItem = items.filter((item) => item.id !== id);
-    
-    
+
     const sortedItems = sortItemByDate(deleteItem);
 
     const filterItems = sortedItems.filter((item) => {
       const [year, month, day] = item.date.split("/").map(Number);
       const dateItem = createDateFromDDMM(item.date);
       const dayOfMonth = dateItem.getDate();
-      return day === dayOfMonth && month === new Date().getMonth() +1
+      return day === dayOfMonth && month === new Date().getMonth() + 1;
     });
 
     const { income, expense, balance } = calculateTotals(filterItems);
-    deleteTransactionItem(id)
+    console.log(id);
 
     setIncome(income);
     setExpense(expense);
     setBalance(balance);
     setItems(sortedItems);
+    handleFecthTransaction();
   };
   useEffect(() => {
     const checkLogin = async () => {
@@ -213,20 +220,19 @@ export default function Dashboard() {
       setLogged(!!token);
       if (!logged) {
         router.replace("/login");
-        return
+        return;
       }
       handleFecthTransaction();
     };
     checkLogin();
   }, []);
 
-  useEffect(()=>{
-
+  useEffect(() => {
     const { income, expense, balance } = calculateTotals(filteredItems);
     setIncome(income);
     setExpense(expense);
     setBalance(balance);
-  },[filteredItems])
+  }, [filteredItems]);
 
   return (
     <PaperProvider>

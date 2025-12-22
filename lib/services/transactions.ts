@@ -102,7 +102,7 @@ export async function createNewItem(
   const json = await res.json();
 
   return {
-    id: json.name.split("-").pop(),
+    id: json.name.split("/").pop(),
     ...item,
   };
 }
@@ -120,5 +120,5 @@ export async function deleteTransactionItem(id: string) {
       },
     }
   );
-  return res;
+  return res
 }
