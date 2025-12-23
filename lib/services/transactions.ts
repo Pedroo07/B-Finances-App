@@ -28,6 +28,7 @@ export type TransactionDto = {
   category: string;
   type: string;
   id: string;
+  paid?: boolean
 };
 
 export async function getUserCollection(): Promise<TransactionDto[]> {

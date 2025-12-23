@@ -70,7 +70,6 @@ export default function Dashboard() {
   const [expense, setExpense] = useState<number>(0);
   const [income, setIncome] = useState<number>(0);
   const [balance, setBalance] = useState<number>(0);
-  const [logged, setLogged] = useState(true);
 
   const handleFecthTransaction = async () => {
     const transactions: TransactionDto[] = (await getUserCollection()) || [];
@@ -217,8 +216,7 @@ export default function Dashboard() {
   useEffect(() => {
     const checkLogin = async () => {
       const token = await AsyncStorage.getItem("token");
-      setLogged(!!token);
-      if (!logged) {
+      if (!token) {
         router.replace("/login");
         return;
       }
