@@ -1,8 +1,9 @@
 import { View, Text, StyleSheet, Image, Pressable } from "react-native";
 import React, { useState } from "react";
 import { TextInput } from "react-native-paper";
-import { updateEmail } from "@/lib/services/user";
+import { updateEmail, updatePassword } from "@/lib/services/user";
 import z from "zod";
+
 
 export default function EditProfile() {
   const [password, setPassword] = useState("");
@@ -11,12 +12,13 @@ export default function EditProfile() {
   const handleUpdateUser = async () => {
     if (email) {
       const data = await updateEmail({ email });
-      console.log(data);
       return data;
     }
     if (password) {
+      const data = await updatePassword({password})
+      return data
     } else {
-      console.log("preenche");
+      
     }
   };
   return (

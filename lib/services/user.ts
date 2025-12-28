@@ -6,9 +6,13 @@ const userSchema = z.object({
   password: z.string().min(8).max(14).regex(/[a-z]/).regex(/[0-9]/),
 });
 const userEmail = z.object({
-  email: z.email('Email Invalid')
-})
+  email: z.email("Email Invalid"),
+});
+const userPassword = z.object({
+  password: z.string().min(8).max(14).regex(/[a-z]/).regex(/[0-9]/),
+});
 type UserEmail = z.infer<typeof userEmail>;
+type UserPassword = z.infer<typeof userPassword>;
 type User = z.infer<typeof userSchema>;
 
 export const signIn = async ({ email, password }: User) => {
@@ -115,30 +119,32 @@ export const signUp = async ({ email, password }: User) => {
   }
 };
 
-export const updateEmail = async ({ email }: UserEmail ) => {
-  const idToken = await AsyncStorage.getItem("idToken")
-  const parsed = userEmail.safeParse({email})
+export const updateEmail = async ({ email }: UserEmail) => {
+  const idToken = await AsyncStorage.getItem("idToken");
+  const parsed = userEmail.safeParse({ email });
   if (!parsed.success) {
     return {
       success: false,
       error: parsed.error.issues[0].message,
     };
-  }try{
-    const res = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=AIzaSyDu_MJeDE9MajCCqXvfXrNUiyIPgytEj9o',
+  }
+  try {
+    const res = await fetch(
+      "https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=AIzaSyDu_MJeDE9MajCCqXvfXrNUiyIPgytEj9o",
       {
-        method: 'POST',
-        headers: {"Content-Type": "application/json"},
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          requestType:"VERIFY_AND_CHANGE_EMAIL",
+          requestType: "VERIFY_AND_CHANGE_EMAIL",
           idToken,
-          newEmail: email
-        })
+          newEmail: email,
+        }),
       }
-    )
-    
-      const data = await res.json()
-      console.log("EMAIL RESULT ===>", data)
-      if (data.error) {
+    );
+
+    const data = await res.json();
+    console.log("EMAIL RESULT ===>", data);
+    if (data.error) {
       const message = data.error.message;
       if (message === "EMAIL_EXISTS")
         return {
@@ -148,7 +154,8 @@ export const updateEmail = async ({ email }: UserEmail ) => {
       if (message === "INVALID_ID_TOKEN")
         return {
           success: false,
-          error: "The user's credential is no longer valid. The user must sign in again.",
+          error:
+            "The user's credential is no longer valid. The user must sign in again.",
         };
       return { success: false, error: "Error logging in" };
     }
@@ -157,12 +164,61 @@ export const updateEmail = async ({ email }: UserEmail ) => {
       message: "email send",
       data,
     };
-    
-  }catch{
+  } catch {
     return {
       success: false,
       error: "Error connecting to the server.",
     };
   }
 };
-export const updatePassword = async ({ password }: User) => {};
+export const updatePassword = async ({ password }: UserPassword) => {
+  const idToken = await AsyncStorage.getItem("idToken");
+  const parsed = userPassword.safeParse({ password });
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0].message,
+    };
+  }
+  try {
+    const res = await fetch(
+      "https://identitytoolkit.googleapis.com/v1/accounts:update?key=AIzaSyDu_MJeDE9MajCCqXvfXrNUiyIPgytEj9o",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idToken,
+          password: password,
+          returnSecureToken: true,
+        }),
+      }
+    );
+    const data = await res.json();
+    console.log("PASSWORD RESULT ===>", data);
+    if (data.error) {
+      const message = data.error.message;
+      if (message === "WEAK_PASSWORD")
+        return {
+          success: false,
+          error: "The password must be 6 characters long or more.",
+        };
+      if (message === "INVALID_ID_TOKEN")
+        return {
+          success: false,
+          error:
+            "The user's credential is no longer valid. The user must sign in again.",
+        };
+      return { success: false, error: "Error logging in" };
+    }
+    return {
+      success: true,
+      message: "passowd changed",
+      data,
+    };
+  } catch {
+    return {
+      success: false,
+      error: "Error connecting to the server.",
+    };
+  }
+};
