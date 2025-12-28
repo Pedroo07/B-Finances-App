@@ -1,99 +1,38 @@
-import { Link, Redirect, useRouter } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, Pressable, Image } from "react-native";
 import { TextInput } from "react-native-paper";
-import * as z from "zod";
+import { signIn } from "@/lib/services/user";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getUserCollection } from "@/lib/services/transactions";
 
-const userSchema = z.object({
-  email: z.email("Email Invalid"),
-  password: z.string().min(8).max(14).regex(/[a-z]/).regex(/[0-9]/),
-});
-type User = z.infer<typeof userSchema>;
 export default function Login() {
   const router = useRouter();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
-  const [logged, setLogged] = useState(false);
-
-  const SignIn = async ({ email, password }: User) => {
-    const parsed = userSchema.safeParse({ email, password });
-    if (!parsed.success) {
-      return {
-        success: false,
-        error: parsed.error.issues[0].message,
-      };
-    }
-    try {
-      const res = await fetch(
-        "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyDu_MJeDE9MajCCqXvfXrNUiyIPgytEj9o",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email,
-            password,
-            returnSecureToken: true,
-          }),
-        }
-      );
-      const data = await res.json();
-      if (data.error) {
-        const message = data.error.message;
-        if (message === "EMAIL_NOT_FOUND")
-          return {
-            success: false,
-            error: "user does not exist",
-          };
-        if (message === "INVALID_PASSWORD")
-          return {
-            success: false,
-            error: "The password is invalid.",
-          };
-        if (message === "USER_DISABLED")
-          return {
-            success: false,
-            error: "The user account has been disabled by an administrator.",
-          };
-        return { success: false, error: "Error logging in" };
-      }
-      return {
-        success: true,
-        data,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: "Error connecting to the server.",
-      };
-    }
-  };
 
   const handleSignIn = async () => {
-    const result = await SignIn({ email, password });
+    const result = await signIn({ email, password });
     if (!result.success) {
       setErrorMessage(result.error);
     } else {
       await AsyncStorage.setItem("token", result.data.idToken);
       await AsyncStorage.setItem("userId", result.data.localId);
-      router.navigate("/")
+      await AsyncStorage.setItem("idToken", result.data.idToken);
+      router.navigate("/(tabs)");
     }
   };
   useEffect(() => {
     const checkLogin = async () => {
       const token = await AsyncStorage.getItem("token");
-      setLogged(!!token);
-      console.log(AsyncStorage.getItem("token"));
+      if (token) {
+        router.navigate("/(tabs)");
+      }
     };
-    
+
     checkLogin();
   }, []);
-  
-  if (logged) {
-    return <Redirect href="/(tabs)" />;
-  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>

@@ -1,80 +1,21 @@
-
 import { Link } from "expo-router";
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Pressable, Image } from "react-native";
 import { TextInput } from "react-native-paper";
-import * as z from "zod";
-
-const userSchema = z.object({
-  email: z.email("Email Invalid"),
-  password: z.string().min(8).max(14).regex(/[a-z]/).regex(/[0-9]/),
-});
-
-type User = z.infer<typeof userSchema>;
+import { signUp } from "@/lib/services/user";
 
 export default function Register() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | undefined>("");
-  const signUp = async ({ email, password }: User) => {
-    const parsed = userSchema.safeParse({ email, password });
-
-    if (!parsed.success) {
-      return {
-        success: false,
-        error: parsed.error!.issues[0].message,
-      };
-    }
-    try {
-      const res = await fetch(
-        "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=AIzaSyDu_MJeDE9MajCCqXvfXrNUiyIPgytEj9o",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email,
-            password,
-            returnSecureToken: true,
-          }),
-        }
-      );
-      const data = await res.json();
-      if (data.error) {
-        const message = data.error.message;
-        if (message === "EMAIL_EXISTS") {
-          return { success: false, error: "Este email já está cadastrado." };
-        }
-
-        if (message === "INVALID_EMAIL") {
-          return { success: false, error: "Email inválido." };
-        }
-
-        if (message === "WEAK_PASSWORD") {
-          return { success: false, error: "A senha é muito fraca." };
-        }
-
-        return { success: false, error: "Erro ao criar conta." };
-      }
-      return {
-        success: true,
-        data,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: "Error ao conectar ao servidor",
-      };
-    }
-  };
+  
   const handleRegister = async () => {
     const result = await signUp({ email, password });
     if (!result.success) {
       setErrorMessage(result.error);
     } else {
       setSuccessMessage("User cadastrado com sucesso");
-     
-      console.log(result.data.localId)
       
     }
   };
