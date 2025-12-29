@@ -1,26 +1,55 @@
 import { View, Text, StyleSheet, Image, Pressable } from "react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { TextInput } from "react-native-paper";
 import { updateEmail, updatePassword } from "@/lib/services/user";
-import z from "zod";
-
+import { Camera, PencilLineIcon } from "lucide-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function EditProfile() {
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
-
+  const [username, setUsername] = useState("Username");
+  const [userEmail, setUserEmail] = useState("")
+  const [editing, setEditing] = useState(false)
+const getUser = async () => {
+  const token = await AsyncStorage.getItem("token")
+  const res = await fetch("https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=AIzaSyDu_MJeDE9MajCCqXvfXrNUiyIPgytEj9o", 
+    {
+        method: "POST",
+        headers: { "Content-Type": "application/json",
+          
+         },
+        body: JSON.stringify({
+          idToken: token
+        }),
+      },     
+  )
+  const data = await res.json()
+  setUserEmail(data.users[0].email)
+}
   const handleUpdateUser = async () => {
     if (email) {
       const data = await updateEmail({ email });
       return data;
     }
     if (password) {
-      const data = await updatePassword({password})
-      return data
+      const data = await updatePassword({ password });
+      return data;
     } else {
-      
     }
   };
+  const handleUsername = async () => {
+    await AsyncStorage.setItem("userName", username);
+    setEditing(false)
+  };
+  useEffect (() => {
+    const loadUsername = async () => {
+      await getUser()
+     const savedUsername =  await AsyncStorage.getItem("userName")
+      if (savedUsername) setUsername(savedUsername)
+    }
+  loadUsername()
+  },[])
   return (
     <View style={styles.container}>
       <View>
@@ -38,12 +67,36 @@ export default function EditProfile() {
       <View style={styles.profileContainer}>
         <View style={styles.contentContainer}>
           <View style={styles.imgContainer}>
-            <Image
-              source={require("../../../assets/images/userImg.jpg")}
-              style={styles.Image}
-            />
-            <Text style={styles.username}>UserName</Text>
-            <Text>Email</Text>
+            <View>
+              <Image
+                source={require("../../../assets/images/userImg.jpg")}
+                style={styles.Image}
+              />
+              <Camera
+                color="white"
+                size={18}
+                style={{
+                  position: "absolute",
+                  bottom: 0,
+                  right: 5,
+                  backgroundColor: "#1e293b",
+                  padding: 5,
+                  borderRadius: 20,
+                }}
+              />
+            </View>
+            {
+              editing ? (
+            <View>
+            <TextInput style={styles.username} onChangeText={setUsername} value={username} onBlur={handleUsername} autoFocus/>
+            </View>
+              ):
+              <View style={{flexDirection: 'row', alignItems: "center"}}>
+                <Text style={styles.username} >{username}</Text>
+                <PencilLineIcon color="black" size={14} style={{ margin: 1 }} onPress={() => setEditing(true)}/>
+              </View>
+            }
+            <Text>{userEmail}</Text>
           </View>
           <View>
             <Text
@@ -114,6 +167,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "600",
     fontSize: 18,
+    padding: 2,
   },
   TextInput: {
     borderRadius: 10,

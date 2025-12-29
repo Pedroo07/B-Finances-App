@@ -18,7 +18,6 @@ export default function Login() {
     } else {
       await AsyncStorage.setItem("token", result.data.idToken);
       await AsyncStorage.setItem("userId", result.data.localId);
-      await AsyncStorage.setItem("idToken", result.data.idToken);
       router.navigate("/(tabs)");
     }
   };

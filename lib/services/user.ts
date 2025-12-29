@@ -120,7 +120,7 @@ export const signUp = async ({ email, password }: User) => {
 };
 
 export const updateEmail = async ({ email }: UserEmail) => {
-  const idToken = await AsyncStorage.getItem("idToken");
+  const idToken = await AsyncStorage.getItem("token");
   const parsed = userEmail.safeParse({ email });
   if (!parsed.success) {
     return {
@@ -143,7 +143,6 @@ export const updateEmail = async ({ email }: UserEmail) => {
     );
 
     const data = await res.json();
-    console.log("EMAIL RESULT ===>", data);
     if (data.error) {
       const message = data.error.message;
       if (message === "EMAIL_EXISTS")
@@ -172,7 +171,7 @@ export const updateEmail = async ({ email }: UserEmail) => {
   }
 };
 export const updatePassword = async ({ password }: UserPassword) => {
-  const idToken = await AsyncStorage.getItem("idToken");
+  const idToken = await AsyncStorage.getItem("token");
   const parsed = userPassword.safeParse({ password });
   if (!parsed.success) {
     return {
