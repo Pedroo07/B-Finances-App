@@ -1,10 +1,17 @@
-import { View, Text, StyleSheet, Image, Pressable, Platform } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  Pressable,
+  Alert,
+} from "react-native";
 import React, { useEffect, useState } from "react";
 import { TextInput } from "react-native-paper";
 import { updateEmail, updatePassword } from "@/lib/services/user";
 import { Camera, PencilLineIcon } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { launchImageLibrary } from "react-native-image-picker";
+import * as ImagePicker from "expo-image-picker";
 export default function EditProfile() {
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
@@ -13,23 +20,24 @@ export default function EditProfile() {
   const [editing, setEditing] = useState(false);
   const [imageUrl, setImageUrl] = useState<string>("");
   const handleImageFromGalerry = async () => {
-    try {
-    const pickImage = Platform.select({
-      native: async () => await launchImageLibrary({ mediaType: "photo" }),
-      web: async () => await launchImageLibrary({ mediaType: "mixed" }),
-    });
-    if (!pickImage) return;
-    const result = await pickImage();
-    if(!result.didCancel && result.assets && result.assets.length){ 
-      const uri = result.assets[0].uri
-      await AsyncStorage.setItem("userImg", uri ? uri: "")
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permissionResult.granted) {
+      Alert.alert('Permission required', 'Permission to access the media library is required.');
+      return;
     }
-  }catch (err) {
-    console.log("error", err)
-  }}
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: "images",
+      quality: 1,
+    });
+    if (!result.canceled) {
+      const uri = result.assets[0].uri;
+      await AsyncStorage.setItem("userImg", uri);
+    }
+  };
   const getUser = async () => {
     const token = await AsyncStorage.getItem("token");
-    const userImg = await AsyncStorage.getItem("userImg")
+    const userImg = await AsyncStorage.getItem("userImg");
     const name = await AsyncStorage.getItem("userName");
     const res = await fetch(
       "https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=AIzaSyDu_MJeDE9MajCCqXvfXrNUiyIPgytEj9o",
@@ -43,8 +51,8 @@ export default function EditProfile() {
     );
     const data = await res.json();
     setUserEmail(data.users[0].email);
-    setImageUrl(userImg? userImg: "")
-    setUsername(name? name : "Username")
+    setImageUrl(userImg ? userImg : "");
+    setUsername(name ? name : "Username");
   };
   const handleUpdateUser = async () => {
     if (email) {
@@ -62,7 +70,7 @@ export default function EditProfile() {
     setEditing(false);
   };
   useEffect(() => {
-    getUser()
+    getUser();
   }, []);
 
   return (
@@ -83,18 +91,19 @@ export default function EditProfile() {
         <View style={styles.contentContainer}>
           <View style={styles.imgContainer}>
             <View>
-              {imageUrl === "" ?
-              <Image
-                source={require("../../../assets/images/userImg.png")}
-                style={styles.Image}
-              /> : 
-              <Image
-                source={{
-                  uri: imageUrl
-                }}
-                style={styles.Image}
-              />
-              }
+              {imageUrl === "" ? (
+                <Image
+                  source={require("../../../assets/images/userImg.png")}
+                  style={styles.Image}
+                />
+              ) : (
+                <Image
+                  source={{
+                    uri: imageUrl,
+                  }}
+                  style={styles.Image}
+                />
+              )}
               <Camera
                 color="white"
                 onPress={handleImageFromGalerry}
@@ -216,4 +225,4 @@ const styles = StyleSheet.create({
     backgroundColor: "#1e293b",
     width: 140,
   },
-})
+});
