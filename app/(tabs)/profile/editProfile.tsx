@@ -1,32 +1,51 @@
-import { View, Text, StyleSheet, Image, Pressable } from "react-native";
+import { View, Text, StyleSheet, Image, Pressable, Platform } from "react-native";
 import React, { useEffect, useState } from "react";
 import { TextInput } from "react-native-paper";
 import { updateEmail, updatePassword } from "@/lib/services/user";
 import { Camera, PencilLineIcon } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import { launchImageLibrary } from "react-native-image-picker";
 export default function EditProfile() {
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("Username");
-  const [userEmail, setUserEmail] = useState("")
-  const [editing, setEditing] = useState(false)
-const getUser = async () => {
-  const token = await AsyncStorage.getItem("token")
-  const res = await fetch("https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=AIzaSyDu_MJeDE9MajCCqXvfXrNUiyIPgytEj9o", 
-    {
+  const [userEmail, setUserEmail] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string>("");
+  const handleImageFromGalerry = async () => {
+    try {
+    const pickImage = Platform.select({
+      native: async () => await launchImageLibrary({ mediaType: "photo" }),
+      web: async () => await launchImageLibrary({ mediaType: "mixed" }),
+    });
+    if (!pickImage) return;
+    const result = await pickImage();
+    if(!result.didCancel && result.assets && result.assets.length){ 
+      const uri = result.assets[0].uri
+      await AsyncStorage.setItem("userImg", uri ? uri: "")
+    }
+  }catch (err) {
+    console.log("error", err)
+  }}
+  const getUser = async () => {
+    const token = await AsyncStorage.getItem("token");
+    const userImg = await AsyncStorage.getItem("userImg")
+    const name = await AsyncStorage.getItem("userName");
+    const res = await fetch(
+      "https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=AIzaSyDu_MJeDE9MajCCqXvfXrNUiyIPgytEj9o",
+      {
         method: "POST",
-        headers: { "Content-Type": "application/json",
-          
-         },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          idToken: token
+          idToken: token,
         }),
-      },     
-  )
-  const data = await res.json()
-  setUserEmail(data.users[0].email)
-}
+      }
+    );
+    const data = await res.json();
+    setUserEmail(data.users[0].email);
+    setImageUrl(userImg? userImg: "")
+    setUsername(name? name : "Username")
+  };
   const handleUpdateUser = async () => {
     if (email) {
       const data = await updateEmail({ email });
@@ -40,16 +59,12 @@ const getUser = async () => {
   };
   const handleUsername = async () => {
     await AsyncStorage.setItem("userName", username);
-    setEditing(false)
+    setEditing(false);
   };
-  useEffect (() => {
-    const loadUsername = async () => {
-      await getUser()
-     const savedUsername =  await AsyncStorage.getItem("userName")
-      if (savedUsername) setUsername(savedUsername)
-    }
-  loadUsername()
-  },[])
+  useEffect(() => {
+    getUser()
+  }, []);
+
   return (
     <View style={styles.container}>
       <View>
@@ -68,12 +83,21 @@ const getUser = async () => {
         <View style={styles.contentContainer}>
           <View style={styles.imgContainer}>
             <View>
+              {imageUrl === "" ?
               <Image
-                source={require("../../../assets/images/userImg.jpg")}
+                source={require("../../../assets/images/userImg.png")}
+                style={styles.Image}
+              /> : 
+              <Image
+                source={{
+                  uri: imageUrl
+                }}
                 style={styles.Image}
               />
+              }
               <Camera
                 color="white"
+                onPress={handleImageFromGalerry}
                 size={18}
                 style={{
                   position: "absolute",
@@ -85,17 +109,27 @@ const getUser = async () => {
                 }}
               />
             </View>
-            {
-              editing ? (
-            <View>
-            <TextInput style={styles.username} onChangeText={setUsername} value={username} onBlur={handleUsername} autoFocus/>
-            </View>
-              ):
-              <View style={{flexDirection: 'row', alignItems: "center"}}>
-                <Text style={styles.username} >{username}</Text>
-                <PencilLineIcon color="black" size={14} style={{ margin: 1 }} onPress={() => setEditing(true)}/>
+            {editing ? (
+              <View>
+                <TextInput
+                  style={styles.username}
+                  onChangeText={setUsername}
+                  value={username}
+                  onBlur={handleUsername}
+                  autoFocus
+                />
               </View>
-            }
+            ) : (
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Text style={styles.username}>{username}</Text>
+                <PencilLineIcon
+                  color="black"
+                  size={14}
+                  style={{ margin: 1 }}
+                  onPress={() => setEditing(true)}
+                />
+              </View>
+            )}
             <Text>{userEmail}</Text>
           </View>
           <View>
@@ -133,7 +167,6 @@ const getUser = async () => {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -183,4 +216,4 @@ const styles = StyleSheet.create({
     backgroundColor: "#1e293b",
     width: 140,
   },
-});
+})

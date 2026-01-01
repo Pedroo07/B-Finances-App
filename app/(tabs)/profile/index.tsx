@@ -1,41 +1,91 @@
 import { View, Pressable, Text, StyleSheet, Image } from "react-native";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { LogOut, Settings, UserRoundPen } from "lucide-react-native";
 
 export default function Profile() {
+  const [imageUrl, setImageUrl] = useState<string>("");
+  const [userEmail, setUserEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const getUser = async () => {
+    const token = await AsyncStorage.getItem("token");
+    const name = await AsyncStorage.getItem("userName");
+    const userImg = await AsyncStorage.getItem("userImg");
+    const res = await fetch(
+      "https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=AIzaSyDu_MJeDE9MajCCqXvfXrNUiyIPgytEj9o",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idToken: token,
+        }),
+      }
+    );
+    const data = await res.json();
+    setUserEmail(data.users[0].email);
+    setImageUrl(userImg ? userImg : "");
+    setUsername(name ? name : "UserName");
+  };
   const SignOut = async () => {
     await AsyncStorage.removeItem("token");
     router.replace("/login");
   };
   const EditProfile = () => {
-    router.push("/(tabs)/profile/editProfile")
-  }
+    router.push("/(tabs)/profile/editProfile");
+  };
+  useEffect(() => {
+    getUser();
+  }, []);
   return (
     <View style={styles.container}>
       <View>
-        <Text style={{color: "white", fontSize: 24, padding: 5, fontWeight: "600"}}>Profile</Text>
+        <Text
+          style={{
+            color: "white",
+            fontSize: 24,
+            padding: 5,
+            fontWeight: "600",
+          }}
+        >
+          Profile
+        </Text>
       </View>
       <View style={styles.profileContainer}>
         <View style={styles.contentContainer}>
           <View style={styles.imgContainer}>
-            <Image
-              source={require("../../../assets/images/userImg.jpg")}
-              style={styles.Image}
-            />
-            <Text style={styles.username}>UserName</Text>
-            <Text>Email</Text>
+            {imageUrl === "" ? (
+              <Image
+                source={require("../../../assets/images/userImg.png")}
+                style={styles.Image}
+              />
+            ) : (
+              <Image
+                source={{
+                  uri: imageUrl,
+                }}
+                style={styles.Image}
+              />
+            )}
+
+            <Text style={styles.username}>{username}</Text>
+            <Text>{userEmail}</Text>
           </View>
-          <Pressable style={{ flexDirection: "row", alignItems: "center" }} onPress={EditProfile}>
-            <UserRoundPen  style={styles.Icon} />
+          <Pressable
+            style={{ flexDirection: "row", alignItems: "center" }}
+            onPress={EditProfile}
+          >
+            <UserRoundPen style={styles.Icon} />
             <Text style={styles.listItem}>Edit Profile</Text>
           </Pressable>
           <Pressable style={{ flexDirection: "row", alignItems: "center" }}>
             <Settings style={styles.Icon} />
             <Text style={styles.listItem}>Settings</Text>
           </Pressable>
-          <Pressable style={{ flexDirection: "row", alignItems: "center" }} onPress={SignOut}>
+          <Pressable
+            style={{ flexDirection: "row", alignItems: "center" }}
+            onPress={SignOut}
+          >
             <LogOut style={styles.Icon} />
             <Text style={styles.listItem}>Logout</Text>
           </Pressable>
