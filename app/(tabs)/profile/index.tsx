@@ -1,7 +1,7 @@
 import { View, Pressable, Text, StyleSheet, Image } from "react-native";
 import React, { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router } from "expo-router";
+import { Link, router } from "expo-router";
 import { LogOut, Settings, UserRoundPen } from "lucide-react-native";
 
 export default function Profile() {
@@ -30,9 +30,6 @@ export default function Profile() {
   const SignOut = async () => {
     await AsyncStorage.removeItem("token");
     router.replace("/login");
-  };
-  const EditProfile = () => {
-    router.push("/(tabs)/profile/editProfile");
   };
   useEffect(() => {
     getUser();
@@ -71,13 +68,13 @@ export default function Profile() {
             <Text style={styles.username}>{username}</Text>
             <Text>{userEmail}</Text>
           </View>
-          <Pressable
+          <View
             style={{ flexDirection: "row", alignItems: "center" }}
-            onPress={EditProfile}
+            
           >
             <UserRoundPen style={styles.Icon} />
-            <Text style={styles.listItem}>Edit Profile</Text>
-          </Pressable>
+            <Link href="/profile/editProfile" style={styles.listItem}>Edit Profile</Link>
+          </View>
           <Pressable style={{ flexDirection: "row", alignItems: "center" }}>
             <Settings style={styles.Icon} />
             <Text style={styles.listItem}>Settings</Text>

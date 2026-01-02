@@ -5,6 +5,7 @@ import {
   Image,
   Pressable,
   Alert,
+  Platform,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { TextInput } from "react-native-paper";
@@ -20,18 +21,36 @@ export default function EditProfile() {
   const [editing, setEditing] = useState(false);
   const [imageUrl, setImageUrl] = useState<string>("");
   const handleImageFromGalerry = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const convertToBase64 = async (uri: string): Promise<string> => {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+    };
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permissionResult.granted) {
-      Alert.alert('Permission required', 'Permission to access the media library is required.');
+      Alert.alert(
+        "Permission required",
+        "Permission to access the media library is required."
+      );
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: "images",
       quality: 1,
     });
-    if (!result.canceled) {
-      const uri = result.assets[0].uri;
+    if (result.canceled) return;
+    const uri = result.assets[0].uri;
+
+    if (Platform.OS === "web") {
+      const base64 = await convertToBase64(uri);
+      await AsyncStorage.setItem("userImg", base64);
+    } else {
       await AsyncStorage.setItem("userImg", uri);
     }
   };

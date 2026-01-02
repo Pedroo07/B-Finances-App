@@ -1,7 +1,6 @@
-import { router, Tabs } from "expo-router";
+import { Tabs } from "expo-router";
 import { FontAwesome } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import React from "react";
 
 export default function TabsLayout() {
   
